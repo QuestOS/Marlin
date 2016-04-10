@@ -24,14 +24,17 @@ $1/%: %.c $(SKETCH_MAIN) $(LIB_DEST)/libc.a
 	$(CC) $(INCS) $(CFLAGS) $$< $(SKETCH_MAIN) -o $$@
 endef
 
-.PHONY: all clean install
+.PHONY: all clean install Marlin
 
-all: $(PROGS)
+all: $(PROGS) Marlin
+
+Marlin: 
+	cd $@; $(MAKE) all
 
 clean:
-	rm -f $(PROGS)
+	rm -f $(PROGS) Marlin/*.o
 
-install: $(PROGS)
-	$(INSTALL_CMD) $(PROGS) $(INSTALL_DIR)
+install: $(PROGS) Marlin
+	$(INSTALL_CMD) $(PROGS) Marlin/marlin $(INSTALL_DIR)
 
 $(foreach bdir,$(BUILD_DIR),$(eval $(call make-goal,$(bdir))))
