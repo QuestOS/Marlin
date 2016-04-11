@@ -15,6 +15,8 @@ int main()
 		mraa_gpio_write(gc, 0);
 		usleep(1000000);
 	}
+	mraa_gpio_close(gc);
+	mraa_gpio_close(gc1);
 
 	return 0;
 }
