@@ -42,4 +42,10 @@ micros()
 	return t.tv_sec * 1000000 + t.tv_usec;
 }
 
+unsigned long
+millis()
+{
+	return (micros() / 1000);
+}
+
 #endif
