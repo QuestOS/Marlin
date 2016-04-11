@@ -1,5 +1,5 @@
-#ifndef __I2C__
-#define __I2C__
+#ifndef _MRAA_I2C__
+#define _MRAA_I2C__
 
 #include "syscall.h"
 
