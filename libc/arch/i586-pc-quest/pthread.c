@@ -44,6 +44,43 @@ _pthread_exit ()
   syscall_thread_exit (NULL);
 }
 
+void pthread_spin_init(pthread_spinlock_t *lock)
+{
+  lock->lock = 0;
+}
+
+void pthread_spin_destroy(pthread_spinlock_t *lock)
+{
+  //TODO
+}
+
+int pthread_spin_lock(pthread_spinlock_t *lock)
+{
+  int x = 1;
+  volatile uint32_t *addr = &lock->lock;
+  for (;;) {
+    asm volatile ("xchgl %1,(%0)":"=r" (addr),
+        "=ir" (x):"0" (addr), "1" (x));
+    if (x == 0)
+      break;
+    asm volatile ("pause");
+  }
+}
+
+int pthread_spin_trylock(pthread_spinlock_t *lock)
+{
+  int x = 1;
+  volatile uint32_t *addr = &lock->lock;
+  asm volatile ("xchgl %1,(%0)":"=r" (addr),
+      "=ir" (x):"0" (addr), "1" (x));
+  return (x == 0);
+}
+
+int pthread_spin_unlock(pthread_spinlock_t *lock)
+{
+  lock->lock = 0;
+}
+
 /* 
  * Local Variables:
  * indent-tabs-mode: nil
