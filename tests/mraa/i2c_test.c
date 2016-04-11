@@ -1,4 +1,4 @@
-#include "i2c.h"
+#include "mraa_i2c.h"
 #include <unistd.h>
 
 int main()

@@ -1,5 +1,5 @@
-#ifndef __GPIO__
-#define __GPIO__
+#ifndef __MRAA_GPIO__
+#define __MRAA_GPIO__
 
 #include "syscall.h"
 
@@ -11,8 +11,7 @@ typedef struct _mraa_gpio_context {
 } mraa_gpio_context;
 
 mraa_gpio_context
-mraa_gpio_init(int pin)
-{
+mraa_gpio_init(int pin) {
 	mraa_gpio_context gc = {.pin = pin};
 	return gc;
 }
