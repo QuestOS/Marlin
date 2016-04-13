@@ -26,7 +26,7 @@
 
 #include "Marlin.h"
 #include "Configuration.h"
-//#include <pthread.h>
+#include "pthread.h"
 
 #ifdef ENABLE_AUTO_BED_LEVELING
 #include "vector_3.h"
@@ -98,23 +98,23 @@ extern unsigned long axis_steps_per_sqr_second[NUM_AXIS];
 extern block_t block_buffer[BLOCK_BUFFER_SIZE];            // A ring buffer for motion instfructions
 extern volatile unsigned char block_buffer_head;           // Index of the next block to be pushed
 extern volatile unsigned char block_buffer_tail;
-//extern pthread_spinlock_t block_spinlock;
+extern pthread_spinlock_t block_spinlock;
 
 // Called when the current block is no longer needed. Discards the block and makes the memory
 // availible for new blocks.    
 static FORCE_INLINE void plan_discard_current_block()  
 {
-  //pthread_spin_lock(&block_spinlock);
+  pthread_spin_lock(&block_spinlock);
   if (block_buffer_head != block_buffer_tail) {
     block_buffer_tail = (block_buffer_tail + 1) & (BLOCK_BUFFER_SIZE - 1);  
   }
-  //pthread_spin_unlock(&block_spinlock);
+  pthread_spin_unlock(&block_spinlock);
 }
 
 // Gets the current block. Returns NULL if buffer empty
 static FORCE_INLINE block_t *plan_get_current_block() 
 {
-  //pthread_spin_lock(&block_spinlock);
+  pthread_spin_lock(&block_spinlock);
   if (block_buffer_head == block_buffer_tail) { 
     return(NULL); 
   }
@@ -122,7 +122,7 @@ static FORCE_INLINE block_t *plan_get_current_block()
   //once busy is set to true, we can release the lock 
   //coz a busy block won't be modified by the planner
   block->busy = true;
-  //pthread_spin_unlock(&block_spinlock);
+  pthread_spin_unlock(&block_spinlock);
 
   DEBUG_PRINT("STEPPER fetching block %u\n", block_buffer_tail);
   return(block);

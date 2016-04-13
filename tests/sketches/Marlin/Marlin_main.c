@@ -65,6 +65,7 @@ float bed_level_probe_offset[3] = {X_PROBE_OFFSET_FROM_EXTRUDER_DEFAULT,
 #endif
 
 extern char _binary_test_gcode_start;
+extern char _binary_test_gcode_end;
 //===========================================================================
 //=============================private variables=============================
 //===========================================================================
@@ -100,7 +101,6 @@ static bool target_direction;
 static bool Stopped = false;
 
 static char *file_buf = NULL;
-static int file_size;
 
 #define XYZ_CONSTS_FROM_CONFIG(type, array, CONFIG) \
 static const type array##_P[3] =        \
@@ -148,88 +148,8 @@ void ikill()
 }
 
 /***********************************/
-
-#if 0
-int main(int argc, char *argv[]) {
-
-  if (argc != 2) {
-    printf("Wrong number of arguments provided... Provided %d instead \
-            of 2\nmarlin /path/to/file\n", argc);
-    exit(1);
-  }
-
-  int file = setup(argv[1]);
-
-  while (1) loop(file);
-  extern pthread_t temp_thread, stp_thread;
-  if (pthread_join(temp_thread, NULL))
-    errExit("pthread_join");
-  if (pthread_join(stp_thread, NULL))
-    errExit("pthread_join");
-
-  return 0;
-}
-
-int setup(char *path)
-{
-  int file;
-  struct stat s;
-
-  if (stat(path, &s) == -1) {
-    printf("Error stating %s\n", path);
-    exit(1);
-  }
-
-  file_size = s.st_size;
-
-  DEBUG_PRINT("opening file %s\n", path);
-  if (!(file = open(path, O_RDONLY))) {
-    perror("open file");
-    exit(1);
-  }
-
-  file_buf = (char *)malloc(file_size);
-  if (read(file, file_buf, file_size) < file_size) {
-    printf("Error reading file\n");
-    exit(1);
-  }
-
-  // loads data from EEPROM if available else uses defaults (and resets step acceleration rate)
-  DEBUG_PRINT("loading data\n");
-  Config_RetrieveSettings();
-
-  //init timer
-  DEBUG_PRINT("initializing timer\n");
-  if(clock_init() < 0) {
-    fprintf(stderr, "Failed to init timer\n");
-    exit(-1);
-  }
-
-  //init board specific data
-  DEBUG_PRINT("initializing board specific data\n");
-  mraa_init();
-  minnowmax_gpio_init();
-  minnowmax_i2c_init();
-
-  //timer_init();
-
-  tp_init();    // Initialize temperature loop
-  DEBUG_PRINT("initializing planner\n");
-  plan_init();  // Initialize planner;
-
-  //init stepper
-  DEBUG_PRINT("initializing stepper\n");
-  st_init();
-
-  //init global_interrupt
-  sigfillset(&global_interrupt);
-  sigemptyset(&old_global_interrupt);
-
-  return file;
-}
-#endif
-
 void setup() {
+  //load commands
  	file_buf = &_binary_test_gcode_start;
 	DEBUG_PRINT("%s", file_buf);
 
@@ -245,18 +165,17 @@ void setup() {
 
   //timer_init();
 
+  DEBUG_PRINT("initializing temperature\n");
   tp_init();    // Initialize temperature loop
+
   DEBUG_PRINT("initializing planner\n");
   plan_init();  // Initialize planner;
 
-  //init stepper
   DEBUG_PRINT("initializing stepper\n");
-  st_init();
-
-
+  st_init();    //init stepper
 }
 
-void loop(1, 30, 100) {
+void loop(1, 50, 1000) {
 	if (get_command()) {
     DEBUG_PRINT("==========================================\n");
     DEBUG_PRINT("%s\n", cmdbuffer);
@@ -394,13 +313,12 @@ void Stop()
 //if it is an empty or comment line, return false
 bool get_command()
 {
-  static int file_pos = 0;
   char cur_char;
   bool comment_mode = false;
   int read_count = 0;
 
-  while (file_pos < file_size) {
-    cur_char = file_buf[file_pos++];
+  while (file_buf != &_binary_test_gcode_end) {
+    cur_char = *(file_buf++);
 
     //if cur_char is ';', turn comment_mode on.
     //if cur_char is '\n', end of line. turn comment_mode off. Check read_count,
