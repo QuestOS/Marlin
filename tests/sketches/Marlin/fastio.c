@@ -68,7 +68,8 @@ void minnowmax_i2c_init()
 
 void SET_OUTPUT(unsigned IO)
 {
-  DEBUG_PRINT("set output %d: %d\n", IO, GET_OS_MAPPING(IO));
+  DEBUG_PRINT("set output %s: %d: %d\n", 
+      gpio_cxt[IO].pin_name, IO, GET_OS_MAPPING(IO));
   if (IO > NGPIO) return;
 	if (!gpio_cxt[IO].mraa_cxt) {
 		gpio_cxt[IO].mraa_cxt = mraa_gpio_init(GET_OS_MAPPING(IO));
@@ -81,7 +82,8 @@ void SET_OUTPUT(unsigned IO)
 
 void SET_INPUT(unsigned IO)
 {
-	DEBUG_PRINT("setting up pin %s\n", gpio_cxt[IO].pin_name);
+  DEBUG_PRINT("set input %s: %d: %d\n", 
+      gpio_cxt[IO].pin_name, IO, GET_OS_MAPPING(IO));
   if (IO > NGPIO) return;
 	if (!gpio_cxt[IO].mraa_cxt) {
 		gpio_cxt[IO].mraa_cxt = mraa_gpio_init(GET_OS_MAPPING(IO));
