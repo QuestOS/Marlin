@@ -15,4 +15,6 @@ int READ(unsigned IO);
 void SET_INPUT(unsigned IO);
 void SET_OUTPUT(unsigned IO);
 
+void minnowmax_gpio_init();
+
 /* vi: set et sw=2 sts=2: */

@@ -28,13 +28,14 @@
 
  */
 
-#include <signal.h>
 #include <inttypes.h>
 #include "pthread.h"
 #include "Marlin.h"
 #include "temperature.h"
 #include "thermistortables.h"
-#include "Arduino.h"
+#include "fastio.h"
+#include "ardutime.h"
+#include "arduthread.h"
 
 //===========================================================================
 //=============================public variables============================
@@ -43,7 +44,7 @@ int target_temperature[EXTRUDERS] = { 0 };
 int current_temperature_raw[EXTRUDERS] = { 0 };
 float current_temperature[EXTRUDERS] = { 0.0 };
 
-pthread_t temp_thread;
+//pthread_t temp_thread;
 
 #ifdef PIDTEMP
   float Kp=DEFAULT_Kp;
@@ -100,8 +101,15 @@ static void updateTemperaturesFromRawValues();
 //=============================   functions      ============================
 //===========================================================================
 //static void handler(int sig, siginfo_t *si, void *uc);
-static void * handler(void * arg);
-    
+//static void * handler(void * arg);
+
+float constrain(float x, float a, float b)
+{
+  if (x >= a && x <= b) return x;
+  else if (x < a) return a;
+  else return b;
+}   
+
 void updatePID()
 {
 #ifdef PIDTEMP
@@ -278,9 +286,9 @@ void tp_init()
   /* start the periodic timer */
   //set_time(timerid, 1, 1000000);
   //enable_timer(timerid);
-  if (pthread_create(&temp_thread, NULL, &handler, NULL)) {
-    errExit("pthread_create");
-  }
+  //if (pthread_create(&temp_thread, NULL, &handler, NULL)) {
+  //  errExit("pthread_create");
+  //}
 
   // Wait for temperature measurement to settle
   delay(250);
@@ -384,7 +392,8 @@ void min_temp_error(uint8_t e) {
 //ISR(TIMER0_COMPB_vect)
 //static void
 //handler(int sig, siginfo_t *si, void *uc)
-static void * handler(void * arg)
+//static void * handler(void * arg)
+void loop(2, 20, 100)
 {
   //these variables are only accesible from the ISR, but static, so they don't lose their value
   unsigned char temp_count = 0;
@@ -394,9 +403,11 @@ static void * handler(void * arg)
   const uint8_t cmd = 0x80;
   uint8_t res[2];
   uint16_t final_res;
-  extern mraa_i2c_context temp_sensor;
+  //extern mraa_i2c_context temp_sensor;
   //nanosleep args
-  const struct timespec t = {.tv_sec = 0, .tv_nsec = 1000000};
+  //const struct timespec t = {.tv_sec = 0, .tv_nsec = 1000000};
+  unsigned msec = 1000;
+
 
   while (1) {
     //DEBUG_PRINT("temperature handler\n");
@@ -455,7 +466,8 @@ static void * handler(void * arg)
       }
   #endif
     }
-    nanosleep(&t, NULL);
+    //nanosleep(&t, NULL);
+    usleep(msec);
   }
 }
 
