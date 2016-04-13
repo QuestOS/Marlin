@@ -21,14 +21,14 @@
 /* The timer calculations of this module informed by the 'RepRap cartesian firmware' by Zack Smith
    and Philipp Tiefenbacher. */
 
-#include <pthread.h>
+#include "pthread.h"
 #include "Marlin.h"
 #include "stepper.h"
 #include "planner.h"
 #include "language.h"
 #include "speed_lookuptable.h"
-#include <mraa.h>
 #include "fastio.h"
+#include <time.h>
 
 
 //===========================================================================
@@ -45,16 +45,16 @@ static block_t *current_block;  // A pointer to the block currently being traced
 //static int timerid;
 //#define ENABLE_STEPPER_DRIVER_INTERRUPT()   enable_timer(timerid)
 //#define DISABLE_STEPPER_DRIVER_INTERRUPT()  disable_timer(timerid)
-static pthread_mutex_t stp_mtx;
+//static pthread_mutex_t stp_mtx;
 static pthread_spinlock_t count_spinlock;
 
-#define ENABLE_STEPPER_DRIVER_INTERRUPT()         \
-  do {                                          \
-    pthread_mutex_trylock(&stp_mtx);            \
-    pthread_mutex_unlock(&stp_mtx);             \
-  } while (0)
-
-#define DISABLE_STEPPER_DRIVER_INTERRUPT() pthread_mutex_trylock(&stp_mtx)
+//#define ENABLE_STEPPER_DRIVER_INTERRUPT()         \
+//  do {                                          \
+//    pthread_mutex_trylock(&stp_mtx);            \
+//    pthread_mutex_unlock(&stp_mtx);             \
+//  } while (0)
+//
+//#define DISABLE_STEPPER_DRIVER_INTERRUPT() pthread_mutex_trylock(&stp_mtx)
 
 // Variables used by The Stepper Driver Interrupt
 static long acceleration_time, deceleration_time;
@@ -205,10 +205,12 @@ void enable_endstops(bool check)
 //  step_events_completed reaches block->decelerate_after after which it decelerates until the trapezoid generator is reset.
 //  The slope of acceleration is calculated with the leib ramp alghorithm.
 
+/*
 void st_wake_up() {
   //  TCNT1 = 0;
   ENABLE_STEPPER_DRIVER_INTERRUPT();
 }
+*/
 
 void step_wait(){
   int8_t i;
@@ -535,8 +537,8 @@ static void * handler(void * arg)
     }
 
     //block if steppers are disabled
-    pthread_mutex_lock(&stp_mtx);
-    pthread_mutex_unlock(&stp_mtx);
+    //pthread_mutex_lock(&stp_mtx);
+    //pthread_mutex_unlock(&stp_mtx);
   }
 }
 
@@ -644,11 +646,11 @@ void st_init()
 */
 
   //init stepper mutex
-  pthread_mutex_init(&stp_mtx, NULL);
-  pthread_mutex_lock(&stp_mtx);
+  //pthread_mutex_init(&stp_mtx, NULL);
+  //pthread_mutex_lock(&stp_mtx);
 
   //init count_position spinlock
-  pthread_spin_init(&count_spinlock, PTHREAD_PROCESS_PRIVATE);
+  pthread_spin_init(&count_spinlock);
 
   //timerid = create_timer(handler);
   if (pthread_create(&stp_thread, NULL, &handler, NULL)) {
@@ -658,18 +660,18 @@ void st_init()
   /* start the one-shot timer */
   //set_time(timerid, 0, 500 * 0x4000);
 
-  ENABLE_STEPPER_DRIVER_INTERRUPT();
+  //ENABLE_STEPPER_DRIVER_INTERRUPT();
 
   enable_endstops(true); // Start with endstops active. After homing they can be disabled
-  sei();
+  //sei();
 }
 
 // Block until all buffered steps are executed
 void st_synchronize()
 {
   while( blocks_queued()) {
-    manage_heater();
-    manage_inactivity();
+    //manage_heater();
+    //manage_inactivity();
     //lcd_update();
   }
 }
@@ -725,15 +727,6 @@ void finishAndDisableSteppers()
   disable_e0();
   disable_e1();
   disable_e2();
-}
-
-void quickStop()
-{
-  DISABLE_STEPPER_DRIVER_INTERRUPT();
-  while(blocks_queued())
-    plan_discard_current_block();
-  current_block = NULL;
-  ENABLE_STEPPER_DRIVER_INTERRUPT();
 }
 
 /* vi: set et sw=2 sts=2: */

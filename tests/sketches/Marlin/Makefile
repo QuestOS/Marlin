@@ -1,14 +1,14 @@
 include ../../../config.mk
-INCS   = -I../../../libarduino/
+INCS   = -I../../../libarduino/ -I../../../libmraa
 CFLAGS = -Wall #-Werror 
-LIBS = -lm
+LIBS = -lm -lc
 
 GCODE_TXT=test.gcode
 SKETCH_MAIN = ../../../libarduino/main.c
 
 all: marlin
 
-marlin: gcode.o main.c planner.c
+marlin: gcode.o main.c planner.c fastio.c stepper.c 
 	$(CC) $(INCS) $(CFLAGS) $^ $(SKETCH_MAIN) -o $@ $(LIBS)
 
 gcode.o:

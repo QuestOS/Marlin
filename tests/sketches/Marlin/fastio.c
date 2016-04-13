@@ -1,9 +1,17 @@
 #include "Marlin.h"
 #include "fastio.h"
 #include <string.h>
+#include "mraa_gpio.h"
 
-struct gpio_context gpio_cxt[NGPIO+1];
-mraa_i2c_context temp_sensor;
+#define GET_OS_MAPPING(n) (gpio_cxt[n].linux_mapping)
+
+struct gpio_context {
+	mraa_gpio_context mraa_cxt;
+	char pin_name[10];
+	int linux_mapping;
+} gpio_cxt[NGPIO+1];
+
+//mraa_i2c_context temp_sensor;
 
 static const int minnowmax_pin_mapping[NGPIO+1] = {
 	-1, -1, -1, -1, -1, 476, 481,
@@ -52,9 +60,9 @@ void SET_OUTPUT(unsigned IO)
   DEBUG_PRINT("set output %d: %d\n", IO, GET_OS_MAPPING(IO));
   if (IO > NGPIO) return;
 	if (!gpio_cxt[IO].mraa_cxt) {
-		gpio_cxt[IO].mraa_cxt = mraa_gpio_init_raw(GET_OS_MAPPING(IO));
+		gpio_cxt[IO].mraa_cxt = mraa_gpio_init(GET_OS_MAPPING(IO));
 		if (!gpio_cxt[IO].mraa_cxt) {
-			errExit("mraa_gpio_init_raw");
+			errExit("mraa_gpio_init");
 		}
 	}
 	mraa_gpio_dir(gpio_cxt[IO].mraa_cxt, MRAA_GPIO_OUT);
@@ -65,9 +73,9 @@ void SET_INPUT(unsigned IO)
 	DEBUG_PRINT("setting up pin %s\n", gpio_cxt[IO].pin_name);
   if (IO > NGPIO) return;
 	if (!gpio_cxt[IO].mraa_cxt) {
-		gpio_cxt[IO].mraa_cxt = mraa_gpio_init_raw(GET_OS_MAPPING(IO));
+		gpio_cxt[IO].mraa_cxt = mraa_gpio_init(GET_OS_MAPPING(IO));
 		if (!gpio_cxt[IO].mraa_cxt) {
-			errExit("mraa_gpio_init_raw");
+			errExit("mraa_gpio_init");
 		}
 	}
 	mraa_gpio_dir(gpio_cxt[IO].mraa_cxt, MRAA_GPIO_IN);
