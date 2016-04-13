@@ -5,13 +5,13 @@
 #ifndef _ARDUTIME_IO_H_
 #define _ARDUTIME_IO_H_
 
-void
+static inline void
 delay(unsigned long ms)
 {
   usleep(ms * 1000);
 }
 
-void
+static inline void
 delayMicroseconds(unsigned long us)
 {
 	usleep(us);
@@ -26,7 +26,7 @@ delayMicroseconds(unsigned long us)
    var |= var##_lo;                                            \
  }
 
-void
+static inline void
 rdtsc(unsigned long long int *rdtsc_ptr)
 {
 	unsigned long long int rdtsc_val;
@@ -34,7 +34,7 @@ rdtsc(unsigned long long int *rdtsc_ptr)
 	memcpy(rdtsc_ptr, &rdtsc_val, sizeof(rdtsc_val));
 }
 
-unsigned long
+static inline unsigned long
 micros()
 {
 	struct timeval t;
@@ -42,7 +42,7 @@ micros()
 	return t.tv_sec * 1000000 + t.tv_usec;
 }
 
-unsigned long
+static inline unsigned long
 millis()
 {
 	return (micros() / 1000);
