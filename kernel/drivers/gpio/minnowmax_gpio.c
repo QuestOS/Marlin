@@ -63,22 +63,23 @@
 
 /* map pin number to memory mapped register offset */
 int pin_mapping[27] = { -1/* no pin 0 */, -1/* GND */, -1/* GND */,
-	-1/* +5V */, -1/* +3.3V */, 0x110, 0x10, 0x120, 0x20, 0x130, 0x40,
-	0x100, 0x0, 0x140, 0xd0, 0x150, 0xc0, 0x70, 0xe0, 0x60, 0xf0,
-	0x21d0, 0xa0, 0x2210, 0xb0, 0x21e0, 0x670/* not confirmed */ };
+	-1/* +5V */, -1/* +3.3V */, 0x110/*5*/, 0x10/*6*/, 0x120/*7*/, 0x20/*8*/, 0x130/*9*/, 0x40/*10*/,
+	0x100/*11*/, 0x0/*12*/, 0x140/*13*/, 0xd0/*14*/, 0x150/*15*/, 0xc0/*16*/, 0x70/*17*/, 0xe0/*18*/,
+	0x60/*19*/, 0xf0/*20*/, 0x21d0/*21*/, 0xa0/*22*/, 0x2210/*23*/, 0xb0/*24*/, 0x21e0/*25*/,
+	0x670/* 26, not confirmed */ };
 
 static pci_device lpc_pci_device;
-static void *gpio_virt_base;
+static void *gpio_s0_virt_base, *gpio_s5_virt_base;
 void * ilb_virt_base; 
 
 static inline void
-minnowmax_gpio_write_r(u32 val , u32 reg)
+minnowmax_gpio_write_r(void * gpio_virt_base, u32 val , u32 reg)
 {
   *(u32 *)((u32)gpio_virt_base + reg) = val;
 }
 
 static inline u32
-minnowmax_gpio_read_r(u32 reg)
+minnowmax_gpio_read_r(void * gpio_virt_base, u32 reg)
 {
   return *(u32 *)((u32)gpio_virt_base + reg);
 }
@@ -93,59 +94,74 @@ dummy_irq_handler(uint8 vec)
 int
 byt_gpio_get(uint32 pin)
 {
-	int conf_reg = pin_mapping[pin];
-	int reg = conf_reg + 0x8;
+	int conf_reg = pin_mapping[pin], reg;
+	void * base;
 
 	if (conf_reg < 0) {
 		logger_printf("this is not a GPIO pin\n");
 		return -1;
 	}
 
-	return minnowmax_gpio_read_r(reg) & BYT_LEVEL;
+	base = (conf_reg >= 0x2000) ? gpio_s5_virt_base : gpio_s0_virt_base;
+	conf_reg = (conf_reg >= 0x2000) ? (conf_reg - 0x2000) : conf_reg;
+
+	reg = conf_reg + 0x8;
+
+	return minnowmax_gpio_read_r(base, reg) & BYT_LEVEL;
 }
 
 void
 byt_gpio_set(uint32 pin, int value)
 {
-	int conf_reg = pin_mapping[pin];
-	int reg = conf_reg + 0x8;
+	int conf_reg = pin_mapping[pin], reg;
 	u32 reg_val;
+	void * base;
 
 	if (conf_reg < 0) {
 		logger_printf("this is not a GPIO pin\n");
 		return;
 	}
 
-	reg_val = minnowmax_gpio_read_r(reg);
+	base = (conf_reg >= 0x2000) ? gpio_s5_virt_base : gpio_s0_virt_base;
+	conf_reg = (conf_reg >= 0x2000) ? (conf_reg - 0x2000) : conf_reg;
+	reg = conf_reg + 0x8;
+
+	reg_val = minnowmax_gpio_read_r(base, reg);
 
 	if (value)
-		minnowmax_gpio_write_r(reg_val | BYT_LEVEL, reg);
+		minnowmax_gpio_write_r(base, reg_val | BYT_LEVEL, reg);
 	else
-		minnowmax_gpio_write_r(reg_val & ~BYT_LEVEL, reg);
+		minnowmax_gpio_write_r(base, reg_val & ~BYT_LEVEL, reg);
 }
 
 int 
 byt_gpio_direction_input(uint32 pin)
 {
-	int conf_reg = pin_mapping[pin];
-	int reg = conf_reg + 0x8;
+	int conf_reg = pin_mapping[pin], reg;
 	u32 reg_val;
+	void * base;
 
 	if (conf_reg < 0) {
 		logger_printf("this is not a GPIO pin\n");
 		return -1;
 	}
 
+	base = (conf_reg >= 0x2000) ? gpio_s5_virt_base : gpio_s0_virt_base;
+	conf_reg = (conf_reg >= 0x2000) ? (conf_reg - 0x2000) : conf_reg;
+	reg = conf_reg + 0x8;
+
 	/* set pin function to GPIO */
-	reg_val = minnowmax_gpio_read_r(conf_reg);
-	DLOG("CONF REG is 0x%x", reg_val);
-	minnowmax_gpio_write_r(reg_val & ~BIT(0), conf_reg);
+	DLOG("pin is %d", pin);
+	DLOG("CONF REG addr is 0x%x", conf_reg);
+	reg_val = minnowmax_gpio_read_r(base, conf_reg);
+	DLOG("CONF REG val is 0x%x", reg_val);
+	minnowmax_gpio_write_r(base, reg_val & ~BIT(0), conf_reg);
 
 	/* enable input alone */
-	reg_val = minnowmax_gpio_read_r(reg) | BYT_DIR_MASK;
+	reg_val = minnowmax_gpio_read_r(base, reg) | BYT_DIR_MASK;
 	reg_val &= ~BYT_INPUT_EN;		/* active low */
 
-	minnowmax_gpio_write_r(reg_val, reg);
+	minnowmax_gpio_write_r(base, reg_val, reg);
 
 	return 0;
 }
@@ -153,29 +169,35 @@ byt_gpio_direction_input(uint32 pin)
 int
 byt_gpio_direction_output(u32 pin, u32 value)
 {
-	int conf_reg = pin_mapping[pin];
-	int reg = conf_reg + 0x8;
+	int conf_reg = pin_mapping[pin], reg;
 	u32 reg_val;
+	void * base;
 
 	if (conf_reg < 0) {
 		logger_printf("this is not a GPIO pin\n");
 		return -1;
 	}
 
+	base = (conf_reg >= 0x2000) ? gpio_s5_virt_base : gpio_s0_virt_base;
+	conf_reg = (conf_reg >= 0x2000) ? (conf_reg - 0x2000) : conf_reg;
+	reg = conf_reg + 0x8;
+
+	DLOG("pin is %d", pin);
+	DLOG("CONF REG addr is 0x%x", conf_reg);
 	/* set pin function to GPIO */
-	reg_val = minnowmax_gpio_read_r(conf_reg);
-	DLOG("CONF REG is 0x%x", reg_val);
-	minnowmax_gpio_write_r(reg_val & ~BIT(0), conf_reg);
+	reg_val = minnowmax_gpio_read_r(base, conf_reg);
+	DLOG("CONF REG val is 0x%x", reg_val);
+	minnowmax_gpio_write_r(base, reg_val & ~BIT(0), conf_reg);
 
 	/* enable output alone */
-	reg_val = minnowmax_gpio_read_r(reg) | BYT_DIR_MASK;
+	reg_val = minnowmax_gpio_read_r(base, reg) | BYT_DIR_MASK;
 	//reg_val &= ~(BYT_OUTPUT_EN | BYT_INPUT_EN);
 	reg_val &= ~BYT_OUTPUT_EN; 
 
 	if (value)
-		minnowmax_gpio_write_r(reg_val | BYT_LEVEL, reg);
+		minnowmax_gpio_write_r(base, reg_val | BYT_LEVEL, reg);
 	else
-		minnowmax_gpio_write_r(reg_val & ~BYT_LEVEL, reg);
+		minnowmax_gpio_write_r(base, reg_val & ~BYT_LEVEL, reg);
 
 	return 0;
 }
@@ -197,19 +219,23 @@ byt_gpio_set_interrupt_type(int pin, interrupt_type type)
 {
 	int conf_reg = pin_mapping[pin];
 	u32 reg_val;
+	void * base;
 
 	if (conf_reg < 0) {
 		logger_printf("this is not a GPIO pin\n");
 		return -1;
 	}
 
-	reg_val = minnowmax_gpio_read_r(conf_reg);
+	base = (conf_reg >= 0x2000) ? gpio_s5_virt_base : gpio_s0_virt_base;
+	conf_reg = (conf_reg >= 0x2000) ? (conf_reg - 0x2000) : conf_reg;
+
+	reg_val = minnowmax_gpio_read_r(base, conf_reg);
 	DLOG("CONF REG is 0x%x", reg_val);
 	if (type)
 		reg_val &= ~(1 << 24);
 	else 
 		reg_val |= (1 << 24);
-	minnowmax_gpio_write_r(reg_val, conf_reg);
+	minnowmax_gpio_write_r(base, reg_val, conf_reg);
 
 	return 0;
 }
@@ -219,13 +245,17 @@ byt_gpio_set_interrupt_polarity(int pin, interrupt_polarity polarity)
 {
 	int conf_reg = pin_mapping[pin];
 	u32 reg_val;
+	void * base;
 
 	if (conf_reg < 0) {
 		logger_printf("this is not a GPIO pin\n");
 		return -1;
 	}
 
-	reg_val = minnowmax_gpio_read_r(conf_reg);
+	base = (conf_reg >= 0x2000) ? gpio_s5_virt_base : gpio_s0_virt_base;
+	conf_reg = (conf_reg >= 0x2000) ? (conf_reg - 0x2000) : conf_reg;
+
+	reg_val = minnowmax_gpio_read_r(base, conf_reg);
 	DLOG("CONF REG is 0x%x", reg_val);
 
 	switch (polarity) {
@@ -238,7 +268,7 @@ byt_gpio_set_interrupt_polarity(int pin, interrupt_polarity polarity)
 			reg_val |= (1 << 26);
 			break;
 	}
-	minnowmax_gpio_write_r(reg_val, conf_reg);
+	minnowmax_gpio_write_r(base, reg_val, conf_reg);
 
 	return 0;
 }
@@ -290,12 +320,14 @@ minnowmax_gpio_init()
     return FALSE;
   } 
 	gpio_mem_addr &= 0xFFFFC000;
-	gpio_virt_base = map_virtual_page (gpio_mem_addr | 0x3);
-  if (gpio_virt_base == NULL) {
+	gpio_s0_virt_base = map_virtual_page (gpio_mem_addr | 0x3);
+	gpio_s5_virt_base = map_virtual_page ((gpio_mem_addr + 0x2000) | 0x3);
+  if (gpio_s0_virt_base == NULL) {
     DLOG ("GPIO unable to map page to phys=%p", gpio_mem_addr);
     return FALSE;
   }
-  DLOG ("GPIO using memory mapped IO at phys=%p virt=%p", gpio_mem_addr, gpio_virt_base);
+  DLOG ("GPIO using memory mapped IO at phys=%p virt_s0=%p, virt_s5=%p",
+			gpio_mem_addr, gpio_s0_virt_base, gpio_s5_virt_base);
 
 #if 0
 	//get GPIO IO port 
@@ -435,7 +467,8 @@ minnowmax_gpio_init()
 	return TRUE;
 
 abort:
-	unmap_virtual_page(gpio_virt_base);
+	unmap_virtual_page(gpio_s0_virt_base);
+	unmap_virtual_page(gpio_s5_virt_base);
 	return FALSE;
 }
 
