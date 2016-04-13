@@ -22,11 +22,12 @@
 /* only support this frequency value for now */
 #define F_CPU 16000000
 
-#define ECHO_FLOAT(x) printf("%lf", x)
-#define ECHO_STRING(x) printf("%s", x)
-#define ECHO_DECIMAL(x) printf("%d", x)
-#define ECHOPAIR_L(name,value) printf("%s: %lu", name, value)
-#define ECHOPAIR_F(name,value) printf("%s: %lf", name, value)
+#define ECHO_FLOAT(x) fprintf(stderr, "%lf", x)
+#define ECHO_STRING(x) fprintf(stderr, "%s", x)
+#define ECHONL() fprintf(stderr, "\n")
+#define ECHO_DECIMAL(x) fprintf(stderr, "%d", x)
+#define ECHOPAIR_L(name,value) fprintf(stderr, "%s: %lu", name, value)
+#define ECHOPAIR_F(name,value) fprintf(stderr, "%s: %lf", name, value)
 
 #define errExit(msg) 	do { perror(msg); exit(EXIT_FAILURE); \
 										 	} while (0)
