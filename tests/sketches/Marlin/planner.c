@@ -56,7 +56,7 @@
 //#include "stepper.h"
 //#include "temperature.h"
 #include "language.h"
-//#include <pthread.h>
+#include "pthread.h"
 
 //===========================================================================
 //=============================public variables ============================
@@ -102,7 +102,7 @@ bool autotemp_enabled=false;
 block_t block_buffer[BLOCK_BUFFER_SIZE];            // A ring buffer for motion instfructions
 volatile unsigned char block_buffer_head;           // Index of the next block to be pushed
 volatile unsigned char block_buffer_tail;           // Index of the block to process now
-//pthread_spinlock_t block_spinlock;
+pthread_spinlock_t block_spinlock;
 
 //===========================================================================
 //=============================private variables ============================
@@ -214,14 +214,14 @@ void calculate_trapezoid_for_block(block_t *block, float entry_factor, float exi
   // CRITICAL_SECTION to avoid stepper handler from kicking in to lock it
   // when we're doing batch updating
   //CRITICAL_SECTION_START;  // Fill variables used by the stepper in a critical section
-  //pthread_spin_lock(&block_spinlock);
+  pthread_spin_lock(&block_spinlock);
   if(block->busy == false) { // Don't update variables if block is busy.
     block->accelerate_until = accelerate_steps;
     block->decelerate_after = accelerate_steps+plateau_steps;
     block->initial_rate = initial_rate;
     block->final_rate = final_rate;
   }
-  //pthread_spin_unlock(&block_spinlock);
+  pthread_spin_unlock(&block_spinlock);
   //CRITICAL_SECTION_END;
 }                    
 
@@ -274,10 +274,10 @@ void planner_reverse_pass() {
   
   //Make a local copy of block_buffer_tail, because the interrupt can alter it
   //CRITICAL_SECTION_START;
-  //pthread_spin_lock(&block_spinlock);
+  pthread_spin_lock(&block_spinlock);
   unsigned char tail = block_buffer_tail;
   //CRITICAL_SECTION_END
-  //pthread_spin_unlock(&block_spinlock);
+  pthread_spin_unlock(&block_spinlock);
   
   if(((block_buffer_head-tail + BLOCK_BUFFER_SIZE) & (BLOCK_BUFFER_SIZE - 1)) > 3) {
     block_index = (block_buffer_head - 3) & (BLOCK_BUFFER_SIZE - 1);
@@ -408,7 +408,7 @@ void plan_init() {
   SET_OUTPUT(FAN_PIN);
   write_fan(0);
 
-  //pthread_spin_init(&block_spinlock, PTHREAD_PROCESS_PRIVATE);
+  pthread_spin_init(&block_spinlock);
 }
 
 #ifdef AUTOTEMP
@@ -851,9 +851,9 @@ void plan_buffer_line(float x, float y, float z, const float e, float feed_rate,
   safe_speed/block->nominal_speed);
 
   // Move buffer head
-  //pthread_spin_lock(&block_spinlock);
+  pthread_spin_lock(&block_spinlock);
   block_buffer_head = next_buffer_head;
-  //pthread_spin_unlock(&block_spinlock);
+  pthread_spin_unlock(&block_spinlock);
   //DEBUG_PRINT("block head upated to: %u\n", block_buffer_head);
 
   // Update position
@@ -861,7 +861,8 @@ void plan_buffer_line(float x, float y, float z, const float e, float feed_rate,
 
   planner_recalculate();
 
-  st_wake_up();
+  //XXX: check the declaration in planner.h for reason of being commented out
+  //st_wake_up();
 }
 
 #ifdef ENABLE_AUTO_BED_LEVELING
