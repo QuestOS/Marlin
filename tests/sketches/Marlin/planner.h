@@ -116,6 +116,7 @@ static FORCE_INLINE block_t *plan_get_current_block()
 {
   pthread_spin_lock(&block_spinlock);
   if (block_buffer_head == block_buffer_tail) { 
+    pthread_spin_unlock(&block_spinlock);
     return(NULL); 
   }
   block_t *block = &block_buffer[block_buffer_tail];
