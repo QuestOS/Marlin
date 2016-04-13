@@ -24,7 +24,7 @@
 
 #define ECHO_FLOAT(x) printf("%lf", x)
 #define ECHO_STRING(x) printf("%s", x)
-#define ECHO_DECIMAL(x) printf("%lu", x)
+#define ECHO_DECIMAL(x) printf("%d", x)
 #define ECHOPAIR_L(name,value) printf("%s: %lu", name, value)
 #define ECHOPAIR_F(name,value) printf("%s: %lf", name, value)
 
@@ -49,8 +49,6 @@ void ikill();
 void manage_inactivity();
 bool IsStopped();
 void Stop();
-
-unsigned char SREG;
 
 #if defined(X_ENABLE_PIN) && X_ENABLE_PIN > -1
   #define  enable_x() WRITE(X_ENABLE_PIN, X_ENABLE_ON)

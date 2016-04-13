@@ -136,9 +136,14 @@ void plan_buffer_line(float x, float y, float z, const float e, float feed_rate,
 // Get the position applying the bed level matrix if enabled
 vector_3 plan_get_position();
 
+void plan_set_e_position(const float);
+
 // Set position. Used for G92 instructions.
 void plan_set_position(float x, float y, float z, const float e);
 void check_axes_activity();
+
+void reset_acceleration_rates();
+void plan_init();
 
 // Gets the current block. Returns NULL if buffer empty
 static FORCE_INLINE bool blocks_queued() 

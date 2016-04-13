@@ -25,16 +25,17 @@
 #include "Marlin.h"
 #include "stepper.h"
 #include "planner.h"
+#include "temperature.h"
 #include "language.h"
 #include "speed_lookuptable.h"
 #include "fastio.h"
-#include <time.h>
-
+#include "ardutime.h"
+#include "arduthread.h"
 
 //===========================================================================
 //=============================public variables  ============================
 //===========================================================================
-pthread_t stp_thread;
+//pthread_t stp_thread;
 
 //===========================================================================
 //=============================private variables ============================
@@ -273,9 +274,10 @@ FORCE_INLINE void trapezoid_generator_reset() {
 // It pops blocks from the block_buffer and executes them by pulsing the stepper pins appropriately.
 //ISR(TIMER1_COMPA_vect)
 //static void handler(void)
-static void * handler(void * arg)
+//static void * handler(void * arg)
+void loop(3, 20, 100)
 {
-  struct timespec t;
+  //struct timespec t;
   // Counter variables for the bresenham line tracer
   long counter_x, counter_y, counter_z, counter_e;
   unsigned char out_bits;        // The next stepping-bits to be output
@@ -306,9 +308,11 @@ static void * handler(void * arg)
       }
       else {
         //set_time(timerid, 0, 500 * 2000);
-        t.tv_sec= 0;
-        t.tv_nsec = 500 * 2000;
-        nanosleep(&t, NULL);
+        //t.tv_sec= 0;
+        //t.tv_nsec = 500 * 2000;
+        //nanosleep(&t, NULL);
+        unsigned msec = 1000;
+        usleep(msec);
       }
     }
 
@@ -490,9 +494,11 @@ static void * handler(void * arg)
         // step_rate to timer interval
         timer = calc_timer(acc_step_rate);
         //set_time(timerid, 0, 500 * timer);
-        t.tv_sec = 0;
-        t.tv_nsec = 500 * timer;
-        nanosleep(&t, NULL);
+        //t.tv_sec = 0;
+        //t.tv_nsec = 500 * timer;
+        //nanosleep(&t, NULL);
+        unsigned msec = timer / 2;
+        usleep(msec);
         acceleration_time += timer;
       }
       else if (step_events_completed > (unsigned long int)current_block->decelerate_after) {
@@ -512,16 +518,20 @@ static void * handler(void * arg)
         // step_rate to timer interval
         timer = calc_timer(step_rate);
         //set_time(timerid, 0, 500 * timer);
-        t.tv_sec = 0;
-        t.tv_nsec = 500 * timer;
-        nanosleep(&t, NULL);
+        //t.tv_sec = 0;
+        //t.tv_nsec = 500 * timer;
+        //nanosleep(&t, NULL);
+        unsigned msec = timer / 2;
+        usleep(msec);
         deceleration_time += timer;
       }
       else {
         //set_time(timerid, 0, 500 * OCR1A_nominal);
-        t.tv_sec = 0;
-        t.tv_nsec = 500 * OCR1A_nominal;
-        nanosleep(&t, NULL);
+        //t.tv_sec = 0;
+        //t.tv_nsec = 500 * OCR1A_nominal;
+        //nanosleep(&t, NULL);
+        unsigned msec = OCR1A_nominal / 2;
+        usleep(msec);
         // ensure we're running at the correct step rate, even if we just came off an acceleration
         step_loops = step_loops_nominal;
       }
@@ -653,9 +663,9 @@ void st_init()
   pthread_spin_init(&count_spinlock);
 
   //timerid = create_timer(handler);
-  if (pthread_create(&stp_thread, NULL, &handler, NULL)) {
-    errExit("pthread_create");
-  }
+  //if (pthread_create(&stp_thread, NULL, &handler, NULL)) {
+  //  errExit("pthread_create");
+  //}
 
   /* start the one-shot timer */
   //set_time(timerid, 0, 500 * 0x4000);
@@ -670,8 +680,8 @@ void st_init()
 void st_synchronize()
 {
   while( blocks_queued()) {
-    //manage_heater();
-    //manage_inactivity();
+    manage_heater();
+    manage_inactivity();
     //lcd_update();
   }
 }

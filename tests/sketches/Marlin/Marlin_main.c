@@ -30,7 +30,7 @@
 #include "Marlin.h"
 #include "Configuration.h"
 #include "ConfigurationStore.h"
-#include "Arduino.h"
+//#include "Arduino.h"
 #include "temperature.h"
 #include "planner.h"
 #include "stepper.h"
@@ -38,9 +38,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include "ardutime.h"
+#include "fastio.h"
+#include "arduthread.h"
 
-#include <fcntl.h>
-#include <sys/stat.h>
+//#include <fcntl.h>
+//#include <sys/stat.h>
 
 //===========================================================================
 //=============================public variables=============================
@@ -61,6 +64,7 @@ float bed_level_probe_offset[3] = {X_PROBE_OFFSET_FROM_EXTRUDER_DEFAULT,
 	Y_PROBE_OFFSET_FROM_EXTRUDER_DEFAULT, -Z_PROBE_OFFSET_FROM_EXTRUDER_DEFAULT};
 #endif
 
+extern char _binary_test_gcode_start;
 //===========================================================================
 //=============================private variables=============================
 //===========================================================================
@@ -120,19 +124,6 @@ XYZ_CONSTS_FROM_CONFIG(signed char, home_dir,  HOME_DIR);
 
 bool setTargetedHotend(int code);
 
-//block all signals to imitate disabling interrupts
-inline void
-cli()
-{
-  sigprocmask(SIG_SETMASK, &global_interrupt, &old_global_interrupt);
-}
-
-inline void
-sei()
-{
-  sigprocmask(SIG_SETMASK, &old_global_interrupt, NULL);
-}
-
 float code_value()
 {
   return (strtod(&cmdbuffer[strchr_pointer - cmdbuffer + 1], NULL));
@@ -158,6 +149,7 @@ void ikill()
 
 /***********************************/
 
+#if 0
 int main(int argc, char *argv[]) {
 
   if (argc != 2) {
@@ -235,14 +227,41 @@ int setup(char *path)
 
   return file;
 }
+#endif
 
-void loop(int fd)
-{
-  if (get_command()) {
+void setup() {
+ 	file_buf = &_binary_test_gcode_start;
+	DEBUG_PRINT("%s", file_buf);
+
+  // loads data from EEPROM if available else uses defaults (and resets step acceleration rate)
+  DEBUG_PRINT("loading data\n");
+  Config_RetrieveSettings();
+
+  //init board specific data
+  DEBUG_PRINT("initializing board specific data\n");
+  //mraa_init();
+  minnowmax_gpio_init();
+  //minnowmax_i2c_init();
+
+  //timer_init();
+
+  tp_init();    // Initialize temperature loop
+  DEBUG_PRINT("initializing planner\n");
+  plan_init();  // Initialize planner;
+
+  //init stepper
+  DEBUG_PRINT("initializing stepper\n");
+  st_init();
+
+
+}
+
+void loop(1, 30, 100) {
+	if (get_command()) {
     DEBUG_PRINT("==========================================\n");
     DEBUG_PRINT("%s\n", cmdbuffer);
     process_commands();
-  }
+	}
 
   //check heater every n milliseconds
   manage_heater();

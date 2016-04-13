@@ -54,9 +54,10 @@
 #include "Marlin.h"
 #include "planner.h"
 //#include "stepper.h"
-//#include "temperature.h"
+#include "temperature.h"
 #include "language.h"
 #include "pthread.h"
+#include "fastio.h"
 
 //===========================================================================
 //=============================public variables ============================

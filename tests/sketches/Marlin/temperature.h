@@ -133,6 +133,7 @@ int getHeaterPower(int heater);
 void disable_heater();
 void setWatch();
 void updatePID();
+float constrain(float, float, float);
 
 FORCE_INLINE void autotempShutdown(){
  #ifdef AUTOTEMP
