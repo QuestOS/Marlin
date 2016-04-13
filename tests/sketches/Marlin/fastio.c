@@ -3,22 +3,32 @@
 #include <string.h>
 #include "mraa_gpio.h"
 
-#define GET_OS_MAPPING(n) (gpio_cxt[n].linux_mapping)
+//#define GET_OS_MAPPING(n) (gpio_cxt[n].linux_mapping)
+#define GET_OS_MAPPING(n) (gpio_cxt[n].quest_mapping)
 
 struct gpio_context {
 	mraa_gpio_context mraa_cxt;
 	char pin_name[10];
-	int linux_mapping;
+	//int linux_mapping;
+	int quest_mapping;
 } gpio_cxt[NGPIO+1];
 
 //mraa_i2c_context temp_sensor;
 
+//static const int minnowmax_pin_mapping[NGPIO+1] = {
+//	-1, -1, -1, -1, -1, 476, 481,
+//	477, 480, 478, 483, 479, 482,
+//	499, 472, 498, 473, 485, 475,
+//	484, 474, 338, 504, 339, 505,
+//	340, 464, 
+//};
+
 static const int minnowmax_pin_mapping[NGPIO+1] = {
-	-1, -1, -1, -1, -1, 476, 481,
-	477, 480, 478, 483, 479, 482,
-	499, 472, 498, 473, 485, 475,
-	484, 474, 338, 504, 339, 505,
-	340, 464, 
+	-1, -1, -1, -1, -1, 5, 6,
+	7, 8, 9, 10, 11, 12,
+	13, 14, 15, 16, 17, 18,
+	19, 20, 21, 22, 23, 24,
+	25, 26, 
 };
 
 static const char minnowmax_pin_assignment[NGPIO+1][10] = {
@@ -36,7 +46,8 @@ void minnowmax_gpio_init()
 	int i;
 	for (i = 0; i < NGPIO+1; i++) {
 		//set linux mapping
-		gpio_cxt[i].linux_mapping = minnowmax_pin_mapping[i];
+		//gpio_cxt[i].linux_mapping = minnowmax_pin_mapping[i];
+		gpio_cxt[i].quest_mapping = minnowmax_pin_mapping[i];
 		//set pin name
 		strcpy(gpio_cxt[i].pin_name, minnowmax_pin_assignment[i]);
 	}
