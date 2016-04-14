@@ -268,12 +268,15 @@ typedef enum {
 	DONE,
 } i2c_trans_status;
 
+#define MAX_RX_BUF 32
+
 struct i2c_trans {
 	i2c_trans_type type;
 	i2c_trans_status status;
 	u32 ispending;
 	u32 data_w[2];
-	u32 data_r;
+	u8 rx_buf[MAX_RX_BUF];
+	u8 bytes_read;
 };
 
 static quest_tss * i2c_owner = NULL;
@@ -316,7 +319,47 @@ u8 byt_i2c_read_byte_data(u8 reg)
 		 * because kernel will never be interrupted */
 		DLOG("about to sleep");
 		schedule();
-		retval = i2c_dev_buffer.data_r;
+		retval = i2c_dev_buffer.rx_buf[0];
+		_mutex_unlock(&i2c_dev_mtx);
+	}
+	return (retval & 0xFF);
+}
+
+int byt_i2c_read_bytes_data(u8 cmd, u8 * buffer, u32 len)
+{
+	u32 val1, val2, retval, i;
+
+	val1 = cmd | DW_IC_CMD_WRITE | DW_IC_CMD_RESTART;
+	val2 = DW_IC_CMD_READ | DW_IC_CMD_STOP | DW_IC_CMD_RESTART;
+
+	if (!mp_enabled) {
+		wait_tx();
+		i2c_write_r(val1, DW_IC_DATA_CMD);
+		wait_tx();
+		i2c_write_r(val2, DW_IC_DATA_CMD);
+		wait_rx();
+		//least significant 9 bits in DW_IC_RXFLR represent
+		//the number of valid data entries in the receive FIFO
+		u32 valid_rx = i2c_read_r(DW_IC_RXFLR) & 0x1ff; 
+		while(valid_rx && len) {
+			*buffer = i2c_read_r(DW_IC_DATA_CMD);
+			valid_rx--;
+			len--;
+			buffer++;
+			retval++;
+		}
+	} else {
+		_mutex_lock(&i2c_dev_mtx);
+		i2c_dev_buffer.type = READ;
+		i2c_dev_buffer.status = WRITE_PENDING,
+		i2c_dev_buffer.data_w[0] = val1;
+		i2c_dev_buffer.data_w[1] = val2;
+		i2c_owner = str();
+		i2c_write_r(DW_IC_INTR_DEFAULT_MASK, DW_IC_INTR_MASK);
+		DLOG("about to sleep");
+		schedule();
+		retval = i2c_dev_buffer.bytes_read;
+		memcpy(buffer, i2c_dev_buffer.rx_buf, retval);
 		_mutex_unlock(&i2c_dev_mtx);
 	}
 	return (retval & 0xFF);
@@ -353,7 +396,7 @@ i2c_write()
 	if (i2c_dev_buffer.status != WRITE_PENDING) {
 		return;
 	}
-	/* we set DW_IC_TX_TL to the value that we are guaranteed
+	/* we set DW_IC_TX_TL to such a value that we are guaranteed
 	 * to finish a transaction's write in one TX_EMPTY interrupt.
 	 * So mask TX_EMPTY out. It is the next transaction who
 	 * will set it on again */
@@ -370,9 +413,17 @@ i2c_write()
 static inline void
 i2c_read()
 {
+	u32 valid_rx, i;
+
 	if (i2c_dev_buffer.status != READ_PENDING)
 		return;
-	i2c_dev_buffer.data_r = i2c_read_r(DW_IC_DATA_CMD);
+
+	// XXX: --TC-- I assume RX FULL interrupt is triggered
+	// after all rx's are received
+	valid_rx = i2c_read_r(DW_IC_RXFLR) & 0x1ff; 
+	i2c_dev_buffer.bytes_read = 0;
+	while(valid_rx--) 
+		i2c_dev_buffer.rx_buf[i2c_dev_buffer.bytes_read++] = i2c_read_r(DW_IC_DATA_CMD);
 	i2c_dev_buffer.status = DONE;
 }
 
