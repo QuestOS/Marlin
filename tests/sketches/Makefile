@@ -32,7 +32,7 @@ Marlin:
 	cd $@; $(MAKE) all
 
 clean:
-	rm -f $(PROGS) Marlin/*.o
+	rm -f $(PROGS) Marlin/*.o Marlin/marlin
 
 install: $(PROGS) Marlin
 	$(INSTALL_CMD) $(PROGS) Marlin/marlin $(INSTALL_DIR)
