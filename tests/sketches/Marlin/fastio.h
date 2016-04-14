@@ -1,7 +1,4 @@
-/*
-  This code contibuted by Triffid_Hunter and modified by Kliment
-  why double up on these macros? see http://gcc.gnu.org/onlinedocs/cpp/Stringification.html
-*/
+#include <inttypes.h>
 
 #define NGPIO 26
 #define ADC_ADDRESS 0x48
@@ -16,5 +13,6 @@ void SET_INPUT(unsigned IO);
 void SET_OUTPUT(unsigned IO);
 
 void minnowmax_gpio_init();
+uint16_t ads7828_read_temp();
 
 /* vi: set et sw=2 sts=2: */

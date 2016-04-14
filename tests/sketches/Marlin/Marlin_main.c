@@ -161,7 +161,7 @@ void setup() {
   DEBUG_PRINT("initializing board specific data\n");
   //mraa_init();
   minnowmax_gpio_init();
-  //minnowmax_i2c_init();
+  minnowmax_i2c_init();
 
   //timer_init();
 

@@ -47,13 +47,14 @@ int
 mraa_i2c_read_bytes_data(mraa_i2c_context ic, uint8_t command, 
 												 uint8_t *data, int length)
 {
-	return make_i2c_syscall(I2C_READ_BYTES, command, data, length);
+	return make_i2c_syscall(I2C_READ_BYTES, command, (int)data, length);
 }
 
 mraa_result_t
 mraa_i2c_stop(mraa_i2c_context ic)
 {
 	free(ic);
+	return MRAA_SUCCESS;
 }
 
 #endif
