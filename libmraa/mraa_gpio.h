@@ -3,9 +3,9 @@
 
 #include "syscall.h"
 #include <stdlib.h>
+#include "mraa_types.h"
 
 enum {PIN_DIR, GPIO_WRITE, GPIO_READ};
-typedef enum {MRAA_SUCCESS, MRAA_ERROR} mraa_result_t;
 typedef enum {MRAA_GPIO_OUT, MRAA_GPIO_IN} mraa_gpio_dir_t;
 
 struct _mraa_gpio_context {
