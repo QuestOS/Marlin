@@ -399,11 +399,7 @@ void loop(2, 50, 1000)
   unsigned char temp_count = 0;
   unsigned long raw_temp_0_value = 0;
   unsigned char temp_state = 0;
-  //--TOM-- single-ended channel 0
-  const uint8_t cmd = 0x80;
-  uint8_t res[2];
-  uint16_t final_res;
-  //extern mraa_i2c_context temp_sensor;
+  uint16_t temp;
   //nanosleep args
   //const struct timespec t = {.tv_sec = 0, .tv_nsec = 1000000};
   unsigned msec = 1000;
@@ -416,18 +412,9 @@ void loop(2, 50, 1000)
     //--TOM-- modified based on Marlin firmware
     //read temperature from TEMP_0_PIN every 8 interrupts
     if (++temp_state % 8 == 0) {
-      //if (mraa_i2c_write_byte(temp_sensor, cmd) != MRAA_SUCCESS)
-      //  errExit("mraa_i2c_write_byte");
-      //mraa_i2c_read(temp_sensor, &res[0], 2);
-      final_res = res[0];
-      final_res = final_res << 8;
-      final_res |= res[1];
-      //XXX
-      //final_res = res[1];
-      //final_res = final_res << 8;
-      //final_res |= res[0];
-      //DEBUG_PRINT("read word: %u\n", final_res);
-      raw_temp_0_value += final_res >> 2;
+      temp = ads7828_read_temp();
+      DEBUG_PRINT("read word: %u\n", temp);
+      raw_temp_0_value += temp >> 2;
       temp_state = 0;
       temp_count++;
     }

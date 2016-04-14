@@ -2,6 +2,7 @@
 #include "fastio.h"
 #include <string.h>
 #include "mraa_gpio.h"
+#include "mraa_i2c.h"
 
 //#define GET_OS_MAPPING(n) (gpio_cxt[n].linux_mapping)
 #define GET_OS_MAPPING(n) (gpio_cxt[n].quest_mapping)
@@ -13,7 +14,7 @@ struct gpio_context {
 	int quest_mapping;
 } gpio_cxt[NGPIO+1];
 
-//mraa_i2c_context temp_sensor;
+mraa_i2c_context temp_sensor;
 
 //static const int minnowmax_pin_mapping[NGPIO+1] = {
 //	-1, -1, -1, -1, -1, 476, 481,
@@ -53,18 +54,36 @@ void minnowmax_gpio_init()
 	}
 }
 
-/*
 void minnowmax_i2c_init()
 {
-  temp_sensor = mraa_i2c_init_raw(0);
+  temp_sensor = mraa_i2c_init(0);
   if (!temp_sensor) {
-    errExit("mraa_i2c_init_raw");
+    errExit("mraa_i2c_init");
   }
 
   if (mraa_i2c_address(temp_sensor, ADC_ADDRESS) != MRAA_SUCCESS)
     errExit("mraa_i2c_address");
 }
-*/
+
+inline uint16_t ads7828_read_temp()
+{
+  //--TOM-- single-ended channel 0
+  const uint8_t cmd = 0x80;
+  uint16_t final_res;
+  uint8_t res[2];
+
+  if (mraa_i2c_write_byte(temp_sensor, cmd) != MRAA_SUCCESS)
+    errExit("mraa_i2c_write_byte");
+  mraa_i2c_read_bytes_data(temp_sensor, cmd, &res[0], 2);
+  final_res = res[0];
+  final_res = final_res << 8;
+  final_res |= res[1];
+  //XXX
+  //final_res = res[1];
+  //final_res = final_res << 8;
+  //final_res |= res[0];
+  return final_res;
+}
 
 void SET_OUTPUT(unsigned IO)
 {
