@@ -27,7 +27,7 @@
 #define DLOG(fmt,...) ;
 #endif
 
-enum ops {I2C_INIT, I2C_WRITE, I2C_READ};
+enum ops {I2C_INIT, I2C_WRITE, I2C_READ_BYTE, I2C_READ_BYTES};
 
 int
 i2c_handler(enum ops operation, int arg1, int arg2, int arg3)
@@ -43,6 +43,16 @@ i2c_handler(enum ops operation, int arg1, int arg2, int arg3)
 		case I2C_WRITE: {
       unsigned char data = arg1; 
       return byt_i2c_write_byte_data(data);
+    }
+		case I2C_READ_BYTE: {
+      u8 cmd = arg1; 
+      return byt_i2c_read_byte_data(cmd);
+    }
+		case I2C_READ_BYTES: {
+      u8 cmd = arg1; 
+      u8 * data = (u8 *)arg2;
+      int length = arg3;
+      return byt_i2c_read_bytes_data(cmd, data, arg3);
     }
 		default:
 			printf("Unsupported operation!");
