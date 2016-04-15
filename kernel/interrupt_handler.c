@@ -1746,7 +1746,8 @@ _interrupt3e (void)
 {
   uint8 phys_id = get_pcpu_id ();
   send_eoi ();
-  LAPIC_start_timer (cpu_bus_freq / QUANTUM_HZ); /* setup next tick */
+  //LAPIC_start_timer (cpu_bus_freq / QUANTUM_HZ); /* setup next tick */
+  LAPIC_start_timer_count_tick(cpu_bus_freq / QUANTUM_HZ, tsc2QUANTUM_HZ_ratio); /* quantum */
 
   lock_kernel ();
 
