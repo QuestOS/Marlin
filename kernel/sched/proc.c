@@ -235,6 +235,7 @@ alloc_thread_TSS (uint32_t child_directory,
 #endif
   pTSS->sandbox_affinity = get_pcpu_id ();
   pTSS->machine_affinity = 0;
+  pTSS->hr_sleep = 0;
 
   semaphore_init (&pTSS->Msem, 1, 0);
 
@@ -302,6 +303,7 @@ duplicate_TSS (uint32 ebp,
 #endif
   pTSS->sandbox_affinity = get_pcpu_id ();
   pTSS->machine_affinity = 0;
+  pTSS->hr_sleep = 0;
 
   semaphore_init (&pTSS->Msem, 1, 0);
 
@@ -338,6 +340,7 @@ alloc_idle_TSS (int cpu_num)
   pTSS->ulStack = USER_STACK_START;
   pTSS->sandbox_affinity = cpu_num;
   pTSS->machine_affinity = 0;
+  pTSS->hr_sleep = 0;
   memcpy (pTSS->name, name, strlen (name));
   pTSS->name[strlen (name)] = '\0';
 
@@ -369,6 +372,7 @@ alloc_TSS (void *pPageDirectory, void *pEntry, int mod_num)
   pTSS->ulStack = USER_STACK_START;
   pTSS->sandbox_affinity = get_pcpu_id ();
   pTSS->machine_affinity = 0;
+  pTSS->hr_sleep = 0;
 
   semaphore_init (&pTSS->Msem, 1, 0);
 

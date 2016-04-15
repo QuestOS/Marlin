@@ -50,6 +50,19 @@ compute_finish (uint32 usec)
   return start + ticks;
 }
 
+static inline uint64
+compute_finish_nanosec (u64 nanosec)
+{
+  uint64 ticks;
+  uint64 start;
+
+  RDTSC (start);
+
+  ticks = div64_64 (tsc_freq * nanosec, 1000000000LL);
+
+  return start + ticks;
+}
+
 /* Must hold lock */
 extern void
 sched_usleep (uint32 usec)
@@ -75,7 +88,38 @@ sched_usleep (uint32 usec)
 extern void
 sched_nanosleep (struct timespec * t)
 {
-  DLOG("nanosleep");
+  if (mp_enabled) {
+    quest_tss *tssp;
+    uint64 nanosec = t->tv_sec * 1000000000LL + t->tv_nsec;
+    uint64 finish = compute_finish_nanosec (nanosec);
+#ifdef DEBUG_SCHED_SLEEP
+    u64 now; RDTSC (now);
+#endif
+    tssp = str();
+    DLOG ("task 0x%x sleeping for %llX nanosec (0x%llX -> 0x%llX)",
+          tssp->tid, nanosec, now, finish);
+    tssp->time = finish;
+    /* a magic number to indicate nanosleep */
+    tssp->hr_sleep = 73;
+    queue_append (&sleepqueue, tssp);
+
+    /* --TC--
+     * The longest time to the next timer interrupt is 1 millisecond.
+     * If I need to sleep longer than that, don't bother with the timer.
+     * Otherwise before I go to sleep, program the timer to wake me up.
+     * Note that it's possible the timer is already set to fire
+     * before my wakeup time. In this case I shouldn't program the timer
+     * to delay its fire (But I don't really need to worry about this because 
+     * LAPIC_start_timer() will do the checking for me). When the timer
+     * fires, sleep queue will be traversed in the timer interrupt handler.
+     * Then, I need to update my time left to wake up and make the decision
+     * again to program the timer or not.
+     */
+    if (nanosec < 1000000LL)
+      LAPIC_start_timer_tick_only(finish);
+
+    schedule ();
+  } 
 }
 
 /* Spin for a given amount of microsec. */
@@ -120,8 +164,17 @@ process_sleepqueue (void)
       /* remove from sleepqueue */
       *q = next;
       tssp->time = 0;
-    } else
+      tssp->hr_sleep = 0;
+    } else {
+      if (tssp->hr_sleep == 73) {
+        /* nanosleep */
+        uint64 tick_left = tssp->time - now;
+        uint64 millisec = div64_64((tick_left * 1000), tsc_freq);
+        if (millisec < 1)
+          LAPIC_start_timer_tick_only(tick_left);
+      }
       q = &tssp->next;
+    }
 
     /* move to next sleeper */
     if (next == NULL)

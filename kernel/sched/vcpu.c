@@ -777,15 +777,19 @@ vcpu_schedule (void)
     /* set timer */
     if (tdelta > 0) {
       u32 count = (u32) div64_64 (tdelta * ((u64) cpu_bus_freq), tsc_freq);
-      if (count == 0)
+      if (count == 0) {
         count = 1;
-      if (count > cpu_bus_freq / QUANTUM_HZ)
+        LAPIC_start_timer_count_tick (count, tsc2cpu_bus_ratio);
+      } else if (count > cpu_bus_freq / QUANTUM_HZ) {
         count = cpu_bus_freq / QUANTUM_HZ;
+        LAPIC_start_timer_count_tick (count, tsc2QUANTUM_HZ_ratio);
+      } else {
+        LAPIC_start_timer_count_only (count);
+      }
       if (vcpu) {
         vcpu->prev_delta = tdelta;
         vcpu->prev_count = count;
       }
-      LAPIC_start_timer (count);
       timer_set = TRUE;
     }
   }
@@ -909,7 +913,7 @@ vmx_migration_end:
 #endif
 
   if (!timer_set)
-    LAPIC_start_timer (cpu_bus_freq / QUANTUM_HZ);
+    LAPIC_start_timer_count_tick (cpu_bus_freq / QUANTUM_HZ, tsc2QUANTUM_HZ_ratio);
 
   if (vcpu) {
     /* handle beginning-of-timeslice accounting */
@@ -985,7 +989,7 @@ vcpu_wakeup (quest_tss *tssp)
 
   if (v->b > 0 && (cur == NULL || cur->T > v->T))
     /* preempt */
-    LAPIC_start_timer (1);
+    LAPIC_start_timer_count_tick (1, tsc2cpu_bus_ratio);
 }
 
 /* ************************************************** */
