@@ -38,6 +38,8 @@ typedef struct
 
 extern uint32 cpu_bus_freq;
 extern uint64 tsc_freq;
+extern uint64 tsc2cpu_bus_ratio;
+extern uint64 tsc2QUANTUM_HZ_ratio;
 
 int smp_init (void);
 void smp_secondary_init (void);

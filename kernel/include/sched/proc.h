@@ -140,7 +140,8 @@ typedef struct _quest_tss
   /* common VCPU scheduling parameters backup */
   u64 C_bak, T_bak, b_bak, usage_bak;
   struct _fault_detection_info* fdi;
-  u8 padding2[1];
+  //u8 padding2[1];
+  u8 hr_sleep;
 } PACKED quest_tss;
 
 CASSERT(sizeof(quest_tss) <= 0x1000, quest_tss_size);

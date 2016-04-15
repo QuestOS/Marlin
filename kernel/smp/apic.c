@@ -16,6 +16,8 @@
  */
 
 #include "arch/i386.h"
+#include "arch/i386-percpu.h"
+#include "arch/i386-div64.h"
 #include "kernel.h"
 #include "mem/mem.h"
 #include "smp/smp.h"
@@ -125,10 +127,53 @@ send_eoi (void)
   }
 }
 
-void
-LAPIC_start_timer (uint32 count)
+DEF_PER_CPU(uint64, last_tick);
+INIT_PER_CPU (last_tick) {
+  percpu_write64(last_tick, 0xFFFFFFFFFFFFFFFFLL);
+}
+
+static inline void
+__LAPIC_start_timer (uint32 count)
 {
   MP_LAPIC_WRITE (LAPIC_TICR, count);
+}
+
+void 
+LAPIC_start_timer_count_tick (uint32 count, uint64 tick)
+{
+  uint64 last_tick_l = percpu_read64(last_tick);
+
+  if (tick < last_tick_l) {
+    percpu_write64(last_tick, tick);
+    __LAPIC_start_timer (count);
+  }
+}
+
+void
+LAPIC_start_timer_count_only (uint32 count)
+{
+  uint64 now, tick;
+  uint64 last_tick_l = percpu_read64(last_tick);
+
+  RDTSC(now);
+  tick = now + div64_64(((u64) count * (u64) cpu_bus_freq), tsc_freq);
+
+  if (tick < last_tick_l) {
+    percpu_write64(last_tick, tick);
+    __LAPIC_start_timer (count);
+  }
+}
+
+void
+LAPIC_start_timer_tick_only (uint64 tick)
+{
+  uint64 last_tick_l = percpu_read64(last_tick);
+
+  if (tick < last_tick_l) {
+    percpu_write64(last_tick, tick);
+    u32 count = (u32) div64_64 (tick * ((u64) cpu_bus_freq), tsc_freq);
+    __LAPIC_start_timer (count);
+  }
 }
 
 void
@@ -215,6 +260,8 @@ smp_LAPIC_timer_irq_handler (void)
 /* CPU BUS FREQUENCY -- IN HERTZ */
 uint32 cpu_bus_freq = 0;
 uint64 tsc_freq = 0;
+uint64 tsc2cpu_bus_ratio = 0;
+uint64 tsc2QUANTUM_HZ_ratio = 0;
 
 /* Use the PIT to find how fast the LAPIC ticks (and correspondingly,
  * the bus speed of the processor) */
@@ -273,6 +320,8 @@ LAPIC_measure_timer (void)
   com1_printf ("TSC frequency = 0x%X 0x%X\n", (uint32) (tsc_freq >> 32),
                (uint32) tsc_freq);
 
+  tsc2cpu_bus_ratio = div64_64(tsc_freq, (u64) cpu_bus_freq);
+  tsc2QUANTUM_HZ_ratio = div64_64(tsc_freq,  (u64) QUANTUM_HZ);
   /* Put the IDT back in shape */
   enable_idt ();
 }
