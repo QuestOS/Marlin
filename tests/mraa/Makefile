@@ -8,7 +8,7 @@ LIBS   = $(LIB_DEST)/crt0.o -lc
 INCS   = -I../../libmraa
 CFLAGS = -Wall 
 
-PROGS = i2c_test gpio_test
+PROGS = i2c_write_test i2c_read_test gpio_test
 
 .PHONY: all clean install
 
