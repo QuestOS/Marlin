@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include "mraa_types.h"
 
-enum {I2C_INIT, I2C_WRITE, I2C_READ_BYTE, I2C_READ_BYTES};
+enum {I2C_INIT, I2C_WRITE_BYTE, I2C_WRITE_WORD, I2C_READ_BYTE, I2C_READ_BYTES};
 
 struct _mraa_i2c_context
 {
@@ -32,9 +32,21 @@ mraa_i2c_address(mraa_i2c_context ic, uint8_t addr)
 }
 
 mraa_result_t
-mraa_i2c_write_byte(mraa_i2c_context ic, unsigned char data)
+mraa_i2c_write_byte(mraa_i2c_context ic, uint8_t data)
 {
-	return make_i2c_syscall(I2C_WRITE, data, 0, 0);
+	if (make_i2c_syscall(I2C_WRITE_BYTE, data, 0, 0))
+		return MRAA_ERROR;
+	else 
+		return MRAA_SUCCESS;
+}
+
+mraa_result_t
+mraa_i2c_write_word(mraa_i2c_context ic, uint16_t data)
+{
+	if (make_i2c_syscall(I2C_WRITE_WORD, data, 0, 0))
+		return MRAA_ERROR;
+	else 
+		return MRAA_SUCCESS;
 }
 
 uint8_t

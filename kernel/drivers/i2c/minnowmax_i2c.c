@@ -266,6 +266,7 @@ typedef enum {
 	WRITE_PENDING = 0,
 	READ_PENDING,
 	DONE,
+	TX_ABORTED,
 } i2c_trans_status;
 
 #define MAX_RX_BUF 32
@@ -274,6 +275,7 @@ struct i2c_trans {
 	i2c_trans_type type;
 	i2c_trans_status status;
 	u32 ispending;
+	u32 len_w;
 	u32 data_w[2];
 	u8 rx_buf[MAX_RX_BUF];
 	u8 bytes_read;
@@ -290,9 +292,10 @@ semaphore i2c_dev_mtx;
 u8 byt_i2c_read_byte_data(u8 reg)
 {
 	u32 val1, val2, retval;
+	DLOG("byt_i2c_read_byte_data");
 
-	val1 = reg | DW_IC_CMD_WRITE | DW_IC_CMD_RESTART;
-	val2 = DW_IC_CMD_READ | DW_IC_CMD_STOP | DW_IC_CMD_RESTART;
+	val1 = reg | DW_IC_CMD_WRITE; 
+	val2 = DW_IC_CMD_READ | DW_IC_CMD_RESTART;
 	/* --TOM--
 	 * mp_enabled can infer weather we are here from
 	 * user process or still doing kernel
@@ -308,9 +311,10 @@ u8 byt_i2c_read_byte_data(u8 reg)
 		retval = i2c_read_r(DW_IC_DATA_CMD);
 	} else {
 		//lock i2c device and write device-global buffer
-		_mutex_lock(&i2c_dev_mtx);
+		//_mutex_lock(&i2c_dev_mtx);
 		i2c_dev_buffer.type = READ;
 		i2c_dev_buffer.status = WRITE_PENDING,
+		i2c_dev_buffer.len_w = 2;
 		i2c_dev_buffer.data_w[0] = val1;
 		i2c_dev_buffer.data_w[1] = val2;
 		i2c_owner = str();
@@ -319,8 +323,11 @@ u8 byt_i2c_read_byte_data(u8 reg)
 		 * because kernel will never be interrupted */
 		DLOG("about to sleep");
 		schedule();
-		retval = i2c_dev_buffer.rx_buf[0];
-		_mutex_unlock(&i2c_dev_mtx);
+		if (i2c_dev_buffer.status == DONE)
+			retval = i2c_dev_buffer.rx_buf[0];
+		else if (i2c_dev_buffer.status == TX_ABORTED)
+			return -1;
+		//_mutex_unlock(&i2c_dev_mtx);
 	}
 	return (retval & 0xFF);
 }
@@ -328,9 +335,10 @@ u8 byt_i2c_read_byte_data(u8 reg)
 int byt_i2c_read_bytes_data(u8 cmd, u8 * buffer, u32 len)
 {
 	u32 val1, val2, retval, i;
+	DLOG("byt_i2c_read_bytes_data");
 
-	val1 = cmd | DW_IC_CMD_WRITE | DW_IC_CMD_RESTART;
-	val2 = DW_IC_CMD_READ | DW_IC_CMD_STOP | DW_IC_CMD_RESTART;
+	val1 = cmd | DW_IC_CMD_WRITE;
+	val2 = DW_IC_CMD_READ | DW_IC_CMD_RESTART;
 
 	if (!mp_enabled) {
 		wait_tx();
@@ -349,18 +357,22 @@ int byt_i2c_read_bytes_data(u8 cmd, u8 * buffer, u32 len)
 			retval++;
 		}
 	} else {
-		_mutex_lock(&i2c_dev_mtx);
+		//_mutex_lock(&i2c_dev_mtx);
 		i2c_dev_buffer.type = READ;
 		i2c_dev_buffer.status = WRITE_PENDING,
+		i2c_dev_buffer.len_w = 2;
 		i2c_dev_buffer.data_w[0] = val1;
 		i2c_dev_buffer.data_w[1] = val2;
 		i2c_owner = str();
 		i2c_write_r(DW_IC_INTR_DEFAULT_MASK, DW_IC_INTR_MASK);
 		DLOG("about to sleep");
 		schedule();
-		retval = i2c_dev_buffer.bytes_read;
-		memcpy(buffer, i2c_dev_buffer.rx_buf, retval);
-		_mutex_unlock(&i2c_dev_mtx);
+		if (i2c_dev_buffer.status == DONE) {
+			retval = i2c_dev_buffer.bytes_read;
+			memcpy(buffer, i2c_dev_buffer.rx_buf, retval);
+		} else if (i2c_dev_buffer.status == TX_ABORTED)
+			return -1;
+		//_mutex_unlock(&i2c_dev_mtx);
 	}
 	return (retval & 0xFF);
 }
@@ -368,25 +380,66 @@ int byt_i2c_read_bytes_data(u8 cmd, u8 * buffer, u32 len)
 s32 byt_i2c_write_byte_data(u8 data)
 {
 	u32 val1;
+	DLOG("byt_i2c_write_byte_data");
 
 	val1 = data | DW_IC_CMD_WRITE | DW_IC_CMD_STOP;
-	//if (!mp_enabled) {
-	//	wait_tx();
-	//	i2c_write_r(val1, DW_IC_DATA_CMD);
-	//	DLOG("Wrote %u to the bus", val1);
-	//} else {
+	if (!mp_enabled) {
+		wait_tx();
+		i2c_write_r(val1, DW_IC_DATA_CMD);
+		DLOG("Wrote %u to the bus", val1);
+	} else {
 		//lock i2c device
 		//_mutex_lock(&i2c_dev_mtx);
 		i2c_dev_buffer.type = WRITE;
 		i2c_dev_buffer.status = WRITE_PENDING,
+		i2c_dev_buffer.len_w = 1;
 		i2c_dev_buffer.data_w[0] = val1;
 		//i2c_dev_buffer.data_w[1] = val2;
 		i2c_owner = str();
 		i2c_write_r(DW_IC_INTR_DEFAULT_MASK, DW_IC_INTR_MASK);
 		DLOG("about to sleep");
 		schedule();
+		if (i2c_dev_buffer.status == DONE)
+			return 0;
+		else if (i2c_dev_buffer.status == TX_ABORTED)
+			return -1;
 		//_mutex_unlock(&i2c_dev_mtx);
-	//}
+	}
+	return 0;
+}
+
+s32 byt_i2c_write_word_data(u16 data)
+{
+	u32 val1, val2;
+	DLOG("byt_i2c_write_word_data");
+
+	val1 = (data >> 8) | DW_IC_CMD_WRITE;
+	val2 = (data & 0xFF) | DW_IC_CMD_WRITE | DW_IC_CMD_STOP;
+	if (!mp_enabled) {
+		wait_tx();
+		i2c_write_r(val1, DW_IC_DATA_CMD);
+		i2c_write_r(val2, DW_IC_DATA_CMD);
+		DLOG("Wrote %u to the bus", val1);
+		DLOG("Wrote %u to the bus", val2);
+	} else {
+		//lock i2c device
+		//_mutex_lock(&i2c_dev_mtx);
+		i2c_dev_buffer.type = WRITE;
+		i2c_dev_buffer.status = WRITE_PENDING,
+		i2c_dev_buffer.len_w = 2;
+		i2c_dev_buffer.data_w[0] = val1;
+		i2c_dev_buffer.data_w[1] = val2;
+		//i2c_dev_buffer.data_w[1] = val2;
+		i2c_owner = str();
+		i2c_write_r(DW_IC_INTR_DEFAULT_MASK, DW_IC_INTR_MASK);
+		DLOG("about to sleep");
+		schedule();
+		if (i2c_dev_buffer.status == DONE)
+			return 0;
+		else if (i2c_dev_buffer.status == TX_ABORTED)
+			return -1;
+		//_mutex_unlock(&i2c_dev_mtx);
+	}
 	return 0;
 }
 
@@ -403,9 +456,11 @@ i2c_write()
 	i2c_write_r((DW_IC_INTR_DEFAULT_MASK & ~DW_IC_INTR_TX_EMPTY),
 			DW_IC_INTR_MASK);
 	DLOG("data_w[0] is 0x%x", i2c_dev_buffer.data_w[0]);
-	//DLOG("data_w[1] is 0x%x", i2c_dev_buffer.data_w[1]);
 	i2c_write_r(i2c_dev_buffer.data_w[0], DW_IC_DATA_CMD);
-	//i2c_write_r(i2c_dev_buffer.data_w[1], DW_IC_DATA_CMD);
+	if (i2c_dev_buffer.len_w == 2) {
+		DLOG("data_w[1] is 0x%x", i2c_dev_buffer.data_w[1]);
+		i2c_write_r(i2c_dev_buffer.data_w[1], DW_IC_DATA_CMD);
+	}
 	i2c_dev_buffer.status = (i2c_dev_buffer.type == READ) ?
 		READ_PENDING : DONE;
 }
@@ -419,7 +474,7 @@ i2c_read()
 		return;
 
 	// XXX: --TC-- I assume RX FULL interrupt is triggered
-	// after all rx's are received
+	// after all rx's have been received
 	valid_rx = i2c_read_r(DW_IC_RXFLR) & 0x1ff; 
 	i2c_dev_buffer.bytes_read = 0;
 	while(valid_rx--) 
@@ -436,13 +491,17 @@ i2c_irq_handler(uint8 vec)
 		/* interrupt is not for me... */
 		return -1;
 	DLOG("IRQ coming..., int_status is 0x%x", int_stat);
-	if (int_stat & DW_IC_INTR_RX_FULL) {
+	if (int_stat & DW_IC_INTR_TX_ABRT) {
+		//transmisson failed
+		i2c_dev_buffer.status = TX_ABORTED;
+		goto done;
+	} else if (int_stat & DW_IC_INTR_RX_FULL) {
 		i2c_read();
 		goto done;
-	}
-	else if (int_stat & DW_IC_INTR_TX_EMPTY) {
+	} else if (int_stat & DW_IC_INTR_TX_EMPTY) {
 		DLOG("type is %d", i2c_dev_buffer.type);
 		i2c_write();
+		DLOG("done writing");
 		/* we are probably not done yet.
 		 * If we are doing a read, we need to
 		 * keep interrupt enabled so that
@@ -450,8 +509,7 @@ i2c_irq_handler(uint8 vec)
 		if (i2c_dev_buffer.type == READ)
 			return 0;
 		goto done;
-	}
-	else {
+	} else {
 		/* ignore other interrupts for now */
 		i2c_clear_int();
 		return 0;

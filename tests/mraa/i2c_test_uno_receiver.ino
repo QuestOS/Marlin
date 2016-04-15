@@ -13,7 +13,13 @@ void loop() {
 // function that executes whenever data is received from master
 // this function is registered as an event, see setup()
 void receiveEvent(int bytes) {
-  int c = Wire.read(); // receive byte as a character
-  Serial.print(c);         // print the character
- 
+  int n = Wire.available();
+  int c, res = 0;
+  //Serial.println(n);
+  while (n--) {
+    c = Wire.read(); // receive byte as a character
+    res = (res << 8) | (c & 0xFF);
+  }
+  
+  Serial.println(res);         // print the character
 }
