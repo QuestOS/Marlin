@@ -286,6 +286,21 @@ usleep (unsigned usec)
 }
 
 inline int
+nanosleep (const struct timespec *req, struct timespec *rem)
+{
+  asm volatile ("int $0x30\n"::"a" (14L), "b" (req):CLOBBERS2);
+	/* 
+	 * No signal in Quest. nanosleep will not be interrupted.
+	 * So remaining time is always 0
+	 */
+	if (rem) {
+		rem->tv_sec = 0;
+		rem->tv_nsec = 0;
+	}
+	return 0;
+}
+
+inline int
 usb_syscall(int device_id, int operation, void* buf, int data_len)
 {
   int ret;

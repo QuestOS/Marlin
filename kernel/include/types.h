@@ -82,6 +82,11 @@ struct tms {
 
 #define CLOCKS_PER_SEC 3640
 
+struct timespec {
+  int    tv_sec;        /* seconds */
+  long   tv_nsec;       /* nanoseconds */
+};
+
 #endif // [#ifndef __ASSEMBLER__]
 
 #endif
