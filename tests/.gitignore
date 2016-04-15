@@ -29,6 +29,7 @@ pololu
 thread
 thread1
 vshm_linux
+nanosleep
 sketches/demo/buggy
 sketches/digital/digital2000
 sketches/digital/fastdigital

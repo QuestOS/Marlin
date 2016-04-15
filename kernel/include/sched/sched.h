@@ -30,6 +30,7 @@ extern void (*wakeup) (quest_tss *);
 extern void wakeup_queue (quest_tss **);
 
 extern void sched_usleep (uint32);
+extern void sched_nanosleep (struct timespec *);
 extern void process_sleepqueue (void);
 
 extern DEF_PER_CPU (quest_tss *, current_task);

@@ -331,6 +331,12 @@ syscall_usleep (u32 eax, u32 ebx, u32 ecx, u32 edx, u32 esi)
   return ebx;
 }
 
+static void
+syscall_nanosleep (u32 eax, u32 ebx, u32 ecx, u32 edx, u32 esi)
+{
+  sched_nanosleep ((struct timespec *) ebx);
+}
+
 static int
 syscall_gpio (u32 eax, u32 ebx, u32 ecx, u32 edx, u32 esi)
 {
@@ -664,6 +670,7 @@ struct syscall syscall_table[] = {
   { .func = (void *)syscall_get_keyboard_events },
   { .func = (void *)syscall_gpio },
   { .func = (void *)syscall_i2c},
+  { .func = (void *)syscall_nanosleep},
 };
 #define NUM_SYSCALLS (sizeof (syscall_table) / sizeof (struct syscall))
 

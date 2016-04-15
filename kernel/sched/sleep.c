@@ -72,6 +72,12 @@ sched_usleep (uint32 usec)
     tsc_delay_usec (usec);
 }
 
+extern void
+sched_nanosleep (struct timespec * t)
+{
+  DLOG("nanosleep");
+}
+
 /* Spin for a given amount of microsec. */
 extern void
 tsc_delay_usec (uint32 usec)
