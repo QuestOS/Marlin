@@ -26,9 +26,15 @@ uint8 LAPIC_get_physical_ID (void);
 void LAPIC_set_logical_destination (uint32);
 void LAPIC_enable_timer (uint8, bool, uint8);
 void send_eoi (void);
+#ifdef NANOSLEEP
 void LAPIC_start_timer_count_only (uint32);
 void LAPIC_start_timer_count_tick(uint32, uint64);
-void LAPIC_start_timer_tick_only (uint64);
+void LAPIC_start_timer_tick_only (uint64, uint64);
+void LAPIC_start_timer_reset(uint32, uint64);
+#else
+void LAPIC_start_timer (uint32);
+#endif
+
 int LAPIC_send_ipi (uint32, uint32);
 uint32 LAPIC_clear_error (void);
 void LAPIC_set_task_priority (uint8);

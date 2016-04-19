@@ -176,7 +176,11 @@ smp_enable_scheduling (void)
                      FALSE,  /* one-shot mode. */
                      1);     /* set LAPIC timer divisor to 1 */
 
-  LAPIC_start_timer_count_tick(cpu_bus_freq / QUANTUM_HZ, tsc2QUANTUM_HZ_ratio); /* quantum */
+#ifdef NANOSLEEP
+  LAPIC_start_timer_reset (cpu_bus_freq / QUANTUM_HZ, tsc2QUANTUM_HZ_ratio);
+#else
+  LAPIC_start_timer (cpu_bus_freq / QUANTUM_HZ);
+#endif
 
   sched_enabled = 1;
 }
@@ -299,7 +303,11 @@ ap_init (void)
     asm volatile ("pause");
 
   LAPIC_enable_timer(0x3e, FALSE, 1);    /* vector=0x3e, one-shot, divisor=1 */
-  LAPIC_start_timer_count_tick(cpu_bus_freq / QUANTUM_HZ, tsc2QUANTUM_HZ_ratio); /* quantum */
+#ifdef NANOSLEEP
+  LAPIC_start_timer_reset (cpu_bus_freq / QUANTUM_HZ, tsc2QUANTUM_HZ_ratio);
+#else
+  LAPIC_start_timer (cpu_bus_freq / QUANTUM_HZ);
+#endif
   
   /* The AP is now operating in an SMP environment so the kernel must
    * be locked before any shared resources are utilized. */

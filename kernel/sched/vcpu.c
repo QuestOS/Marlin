@@ -779,12 +779,24 @@ vcpu_schedule (void)
       u32 count = (u32) div64_64 (tdelta * ((u64) cpu_bus_freq), tsc_freq);
       if (count == 0) {
         count = 1;
+#ifdef NANOSLEEP
         LAPIC_start_timer_count_tick (count, tsc2cpu_bus_ratio);
+#else
+        LAPIC_start_timer(count);
+#endif
       } else if (count > cpu_bus_freq / QUANTUM_HZ) {
         count = cpu_bus_freq / QUANTUM_HZ;
+#ifdef NANOSLEEP
         LAPIC_start_timer_count_tick (count, tsc2QUANTUM_HZ_ratio);
+#else
+        LAPIC_start_timer(count);
+#endif
       } else {
+#ifdef NANOSLEEP
         LAPIC_start_timer_count_only (count);
+#else
+        LAPIC_start_timer(count);
+#endif
       }
       if (vcpu) {
         vcpu->prev_delta = tdelta;
@@ -913,7 +925,12 @@ vmx_migration_end:
 #endif
 
   if (!timer_set)
+#ifdef NANOSLEEP
     LAPIC_start_timer_count_tick (cpu_bus_freq / QUANTUM_HZ, tsc2QUANTUM_HZ_ratio);
+#else
+    LAPIC_start_timer (cpu_bus_freq / QUANTUM_HZ);
+#endif
+  }
 
   if (vcpu) {
     /* handle beginning-of-timeslice accounting */
@@ -989,7 +1006,11 @@ vcpu_wakeup (quest_tss *tssp)
 
   if (v->b > 0 && (cur == NULL || cur->T > v->T))
     /* preempt */
+#ifdef NANOSLEEP
     LAPIC_start_timer_count_tick (1, tsc2cpu_bus_ratio);
+#else
+    LAPIC_start_timer (1);
+#endif
 }
 
 /* ************************************************** */
