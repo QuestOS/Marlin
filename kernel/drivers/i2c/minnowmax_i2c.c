@@ -289,7 +289,7 @@ semaphore i2c_dev_mtx;
 #define _mutex_lock(mtx) semaphore_wait(mtx, 1, -1) 
 #define _mutex_unlock(mtx) semaphore_signal(mtx, 1) 
 
-u8 byt_i2c_read_byte_data(u8 reg)
+int byt_i2c_read_byte_data(u8 reg)
 {
 	u32 val1, val2, retval;
 	DLOG("byt_i2c_read_byte_data");
@@ -331,6 +331,54 @@ u8 byt_i2c_read_byte_data(u8 reg)
 		//_mutex_unlock(&i2c_dev_mtx);
 	}
 	return (retval & 0xFF);
+}
+
+int byt_i2c_read_word_data(u8 reg)
+{
+	u32 val1, val2, retval;
+	DLOG("byt_i2c_read_word_data");
+
+	/* --TOM--: need a STOP b/w write and read */
+	val1 = reg | DW_IC_CMD_WRITE | DW_IC_CMD_STOP;
+	val2 = DW_IC_CMD_READ;
+	/* --TOM--
+	 * mp_enabled can infer weather we are here from
+	 * user process or still doing kernel
+	 * initialization. If from user process, do a sleep
+	 * to block the process and wait for interrupts.
+	 * Otherwise, do a polling */
+	if (!mp_enabled) {
+		wait_tx();
+		i2c_write_r(val1, DW_IC_DATA_CMD);
+		wait_tx();
+		i2c_write_r(val2, DW_IC_DATA_CMD);
+		wait_rx();
+		retval = i2c_read_r(DW_IC_DATA_CMD) & 0xFF;
+		retval = (retval << 8) | (i2c_read_r(DW_IC_DATA_CMD) & 0xFF);
+	} else {
+		//lock i2c device and write device-global buffer
+		//_mutex_lock(&i2c_dev_mtx);
+		i2c_dev_buffer.type = READ;
+		i2c_dev_buffer.status = WRITE_PENDING,
+		i2c_dev_buffer.len_w = 2;
+		i2c_dev_buffer.data_w[0] = val1;
+		i2c_dev_buffer.data_w[1] = val2;
+		i2c_owner = str();
+		i2c_write_r(DW_IC_INTR_DEFAULT_MASK, DW_IC_INTR_MASK);
+		/* We won't receive interrupts until schedule() is called
+		 * because kernel will never be interrupted */
+		DLOG("about to sleep");
+		schedule();
+		if (i2c_dev_buffer.status == DONE) {
+			retval = i2c_dev_buffer.rx_buf[0];
+			retval = (retval << 8) | i2c_dev_buffer.rx_buf[1];
+			retval &= 0xFFFF;
+		}
+		else if (i2c_dev_buffer.status == TX_ABORTED)
+			return -1;
+		//_mutex_unlock(&i2c_dev_mtx);
+	}
+	return retval;
 }
 
 int byt_i2c_read_bytes_data(u8 cmd, u8 * buffer, u32 len)
@@ -375,7 +423,7 @@ int byt_i2c_read_bytes_data(u8 cmd, u8 * buffer, u32 len)
 			return -1;
 		//_mutex_unlock(&i2c_dev_mtx);
 	}
-	return (retval & 0xFF);
+	return retval;
 }
 
 s32 byt_i2c_write_byte(u8 data)
