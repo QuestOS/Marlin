@@ -276,7 +276,7 @@ struct i2c_trans {
 	i2c_trans_status status;
 	u32 ispending;
 	u32 len_w;
-	u32 data_w[2];
+	u32 data_w[3];
 	u8 rx_buf[MAX_RX_BUF];
 	u8 bytes_read;
 };
@@ -294,8 +294,9 @@ u8 byt_i2c_read_byte_data(u8 reg)
 	u32 val1, val2, retval;
 	DLOG("byt_i2c_read_byte_data");
 
-	val1 = reg | DW_IC_CMD_WRITE; 
-	val2 = DW_IC_CMD_READ | DW_IC_CMD_RESTART;
+	/* --TOM--: need a STOP b/w write and read */
+	val1 = reg | DW_IC_CMD_WRITE | DW_IC_CMD_STOP;
+	val2 = DW_IC_CMD_READ;
 	/* --TOM--
 	 * mp_enabled can infer weather we are here from
 	 * user process or still doing kernel
@@ -337,8 +338,8 @@ int byt_i2c_read_bytes_data(u8 cmd, u8 * buffer, u32 len)
 	u32 val1, val2, retval, i;
 	DLOG("byt_i2c_read_bytes_data");
 
-	val1 = cmd | DW_IC_CMD_WRITE;
-	val2 = DW_IC_CMD_READ | DW_IC_CMD_RESTART;
+	val1 = cmd | DW_IC_CMD_WRITE | DW_IC_CMD_STOP;
+	val2 = DW_IC_CMD_READ;
 
 	if (!mp_enabled) {
 		wait_tx();
@@ -377,10 +378,10 @@ int byt_i2c_read_bytes_data(u8 cmd, u8 * buffer, u32 len)
 	return (retval & 0xFF);
 }
 
-s32 byt_i2c_write_byte_data(u8 data)
+s32 byt_i2c_write_byte(u8 data)
 {
 	u32 val1;
-	DLOG("byt_i2c_write_byte_data");
+	DLOG("byt_i2c_write_byte");
 
 	val1 = data | DW_IC_CMD_WRITE | DW_IC_CMD_STOP;
 	if (!mp_enabled) {
@@ -408,10 +409,10 @@ s32 byt_i2c_write_byte_data(u8 data)
 	return 0;
 }
 
-s32 byt_i2c_write_word_data(u16 data)
+s32 byt_i2c_write_word(u16 data)
 {
 	u32 val1, val2;
-	DLOG("byt_i2c_write_word_data");
+	DLOG("byt_i2c_write_word");
 
 	val1 = (data >> 8) | DW_IC_CMD_WRITE;
 	val2 = (data & 0xFF) | DW_IC_CMD_WRITE | DW_IC_CMD_STOP;
@@ -429,7 +430,44 @@ s32 byt_i2c_write_word_data(u16 data)
 		i2c_dev_buffer.len_w = 2;
 		i2c_dev_buffer.data_w[0] = val1;
 		i2c_dev_buffer.data_w[1] = val2;
-		//i2c_dev_buffer.data_w[1] = val2;
+		i2c_owner = str();
+		i2c_write_r(DW_IC_INTR_DEFAULT_MASK, DW_IC_INTR_MASK);
+		DLOG("about to sleep");
+		schedule();
+		if (i2c_dev_buffer.status == DONE)
+			return 0;
+		else if (i2c_dev_buffer.status == TX_ABORTED)
+			return -1;
+		//_mutex_unlock(&i2c_dev_mtx);
+	}
+	return 0;
+}
+
+s32 byt_i2c_write_word_data(u8 cmd, u16 data)
+{
+	u32 val1, val2, val3;
+	DLOG("byt_i2c_write_word_data");
+
+	val1 = cmd | DW_IC_CMD_WRITE;
+	val2 = (data >> 8) | DW_IC_CMD_WRITE;
+	val3 = (data & 0xFF) | DW_IC_CMD_WRITE | DW_IC_CMD_STOP;
+	if (!mp_enabled) {
+		wait_tx();
+		i2c_write_r(val1, DW_IC_DATA_CMD);
+		i2c_write_r(val2, DW_IC_DATA_CMD);
+		i2c_write_r(val3, DW_IC_DATA_CMD);
+		DLOG("Wrote %u to the bus", val1);
+		DLOG("Wrote %u to the bus", val2);
+		DLOG("Wrote %u to the bus", val3);
+	} else {
+		//lock i2c device
+		//_mutex_lock(&i2c_dev_mtx);
+		i2c_dev_buffer.type = WRITE;
+		i2c_dev_buffer.status = WRITE_PENDING,
+		i2c_dev_buffer.len_w = 3;
+		i2c_dev_buffer.data_w[0] = val1;
+		i2c_dev_buffer.data_w[1] = val2;
+		i2c_dev_buffer.data_w[2] = val3;
 		i2c_owner = str();
 		i2c_write_r(DW_IC_INTR_DEFAULT_MASK, DW_IC_INTR_MASK);
 		DLOG("about to sleep");
@@ -455,11 +493,11 @@ i2c_write()
 	 * will set it on again */
 	i2c_write_r((DW_IC_INTR_DEFAULT_MASK & ~DW_IC_INTR_TX_EMPTY),
 			DW_IC_INTR_MASK);
-	DLOG("data_w[0] is 0x%x", i2c_dev_buffer.data_w[0]);
-	i2c_write_r(i2c_dev_buffer.data_w[0], DW_IC_DATA_CMD);
-	if (i2c_dev_buffer.len_w == 2) {
-		DLOG("data_w[1] is 0x%x", i2c_dev_buffer.data_w[1]);
-		i2c_write_r(i2c_dev_buffer.data_w[1], DW_IC_DATA_CMD);
+	/* bump data into tx fifo */
+	uint8_t i;
+	for (i = 0; i < i2c_dev_buffer.len_w; i++) {
+		DLOG("data_w[%d] is 0x%x", i, i2c_dev_buffer.data_w[i]);
+		i2c_write_r(i2c_dev_buffer.data_w[i], DW_IC_DATA_CMD);
 	}
 	i2c_dev_buffer.status = (i2c_dev_buffer.type == READ) ?
 		READ_PENDING : DONE;
