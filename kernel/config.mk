@@ -64,3 +64,5 @@ CFG += -DNO_POLOLU
 
 # Disable attachInterrupt IOVCPU
 # CFG += -DNO_GPIO_IOVCPU
+
+CFG += -DNANOSLEEP

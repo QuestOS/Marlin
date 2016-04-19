@@ -50,19 +50,6 @@ compute_finish (uint32 usec)
   return start + ticks;
 }
 
-static inline uint64
-compute_finish_nanosec (u64 nanosec)
-{
-  uint64 ticks;
-  uint64 start;
-
-  RDTSC (start);
-
-  ticks = div64_64 (tsc_freq * nanosec, 1000000000LL);
-
-  return start + ticks;
-}
-
 /* Must hold lock */
 extern void
 sched_usleep (uint32 usec)
@@ -85,23 +72,24 @@ sched_usleep (uint32 usec)
     tsc_delay_usec (usec);
 }
 
+#ifdef NANOSLEEP
 extern void
 sched_nanosleep (struct timespec * t)
 {
   if (mp_enabled) {
-    quest_tss *tssp;
-    uint64 nanosec = t->tv_sec * 1000000000LL + t->tv_nsec;
-    uint64 finish = compute_finish_nanosec (nanosec);
-#ifdef DEBUG_SCHED_SLEEP
-    u64 now; RDTSC (now);
-#endif
-    tssp = str();
-    DLOG ("task 0x%x sleeping for %llX nanosec (0x%llX -> 0x%llX)",
-          tssp->tid, nanosec, now, finish);
-    tssp->time = finish;
+    quest_tss *tssp = str();
+    uint64 nanosec, ticks, now, finish;
+    
+    nanosec = t->tv_sec * 1000000000LL + t->tv_nsec;
+    ticks = div64_64 (tsc_freq * nanosec, 1000000000LL);
     /* a magic number to indicate nanosleep */
     tssp->hr_sleep = 73;
     queue_append (&sleepqueue, tssp);
+
+    /* delay as much as possible to read the current time stamp */
+    RDTSC (now);
+    finish = now + ticks;
+    tssp->time = finish;
 
     /* --TC--
      * The longest time to the next timer interrupt is 1 millisecond.
@@ -116,11 +104,12 @@ sched_nanosleep (struct timespec * t)
      * again to program the timer or not.
      */
     if (nanosec < 1000000LL)
-      LAPIC_start_timer_tick_only(finish);
+      LAPIC_start_timer_tick_only(ticks, finish);
 
     schedule ();
   } 
 }
+#endif
 
 /* Spin for a given amount of microsec. */
 extern void
@@ -166,13 +155,17 @@ process_sleepqueue (void)
       tssp->time = 0;
       tssp->hr_sleep = 0;
     } else {
+#ifdef NANOSLEEP
       if (tssp->hr_sleep == 73) {
         /* nanosleep */
         uint64 tick_left = tssp->time - now;
-        uint64 millisec = div64_64((tick_left * 1000), tsc_freq);
-        if (millisec < 1)
-          LAPIC_start_timer_tick_only(tick_left);
+        extern u32 tsc_freq_msec;
+        /* less than 1 millisecond */
+        if (tick_left < tsc_freq_msec) {
+          LAPIC_start_timer_tick_only(tick_left, tssp->time);
+        }
       }
+#endif
       q = &tssp->next;
     }
 

@@ -127,10 +127,8 @@ send_eoi (void)
   }
 }
 
+#ifdef NANOSLEEP
 DEF_PER_CPU(uint64, last_tick);
-INIT_PER_CPU (last_tick) {
-  percpu_write64(last_tick, 0xFFFFFFFFFFFFFFFFLL);
-}
 
 static inline void
 __LAPIC_start_timer (uint32 count)
@@ -138,10 +136,25 @@ __LAPIC_start_timer (uint32 count)
   MP_LAPIC_WRITE (LAPIC_TICR, count);
 }
 
+void
+LAPIC_start_timer_reset (uint32 count, uint64 tick)
+{
+  uint64 now;
+
+  RDTSC(now);
+  tick += now;
+  percpu_write64(last_tick, tick);
+  __LAPIC_start_timer (count);
+}
+
 void 
 LAPIC_start_timer_count_tick (uint32 count, uint64 tick)
 {
   uint64 last_tick_l = percpu_read64(last_tick);
+  uint64 now;
+
+  RDTSC(now);
+  tick += now;
 
   if (tick < last_tick_l) {
     percpu_write64(last_tick, tick);
@@ -152,29 +165,33 @@ LAPIC_start_timer_count_tick (uint32 count, uint64 tick)
 void
 LAPIC_start_timer_count_only (uint32 count)
 {
-  uint64 now, tick;
-  uint64 last_tick_l = percpu_read64(last_tick);
+  uint64 tick;
 
-  RDTSC(now);
-  tick = now + div64_64(((u64) count * (u64) cpu_bus_freq), tsc_freq);
-
-  if (tick < last_tick_l) {
-    percpu_write64(last_tick, tick);
-    __LAPIC_start_timer (count);
-  }
+  tick = div64_64(((u64) count) * tsc_freq, (u64)cpu_bus_freq);
+  LAPIC_start_timer_count_tick(count, tick);
 }
 
 void
-LAPIC_start_timer_tick_only (uint64 tick)
+LAPIC_start_timer_tick_only (uint64 rel_tick, uint64 abs_tick)
 {
   uint64 last_tick_l = percpu_read64(last_tick);
 
-  if (tick < last_tick_l) {
-    percpu_write64(last_tick, tick);
-    u32 count = (u32) div64_64 (tick * ((u64) cpu_bus_freq), tsc_freq);
+  if (abs_tick < last_tick_l) {
+    percpu_write64(last_tick, abs_tick);
+    u32 count = (u32) div64_64 (rel_tick * ((u64) cpu_bus_freq), tsc_freq);
     __LAPIC_start_timer (count);
   }
 }
+#else
+
+void
+LAPIC_start_timer (uint32 count)
+{
+  extern int nano_print;
+  uint64 now;
+  MP_LAPIC_WRITE (LAPIC_TICR, count);
+}
+#endif
 
 void
 LAPIC_set_logical_destination(uint32 log_dest) {
