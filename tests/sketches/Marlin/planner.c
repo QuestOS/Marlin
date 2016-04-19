@@ -79,9 +79,9 @@ unsigned long axis_steps_per_sqr_second[NUM_AXIS];
 #ifdef ENABLE_AUTO_BED_LEVELING
 // this holds the required transform to compensate for bed level
 matrix_3x3 plan_bed_level_matrix = {
-	1.0, 0.0, 0.0,
-	0.0, 1.0, 0.0,
-	0.0, 0.0, 1.0,
+  .matrix = { 1.0, 0.0, 0.0,
+              0.0, 1.0, 0.0,
+              0.0, 0.0, 1.0,},
 };
 #endif // #ifdef ENABLE_AUTO_BED_LEVELING
 

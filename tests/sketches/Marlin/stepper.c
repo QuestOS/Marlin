@@ -49,13 +49,15 @@ static block_t *current_block;  // A pointer to the block currently being traced
 //static pthread_mutex_t stp_mtx;
 static pthread_spinlock_t count_spinlock;
 
-//#define ENABLE_STEPPER_DRIVER_INTERRUPT()         \
-//  do {                                          \
-//    pthread_mutex_trylock(&stp_mtx);            \
-//    pthread_mutex_unlock(&stp_mtx);             \
-//  } while (0)
-//
-//#define DISABLE_STEPPER_DRIVER_INTERRUPT() pthread_mutex_trylock(&stp_mtx)
+#if 0
+#define ENABLE_STEPPER_DRIVER_INTERRUPT()         \
+  do {                                          \
+    pthread_mutex_trylock(&stp_mtx);            \
+    pthread_mutex_unlock(&stp_mtx);             \
+  } while (0)
+
+#define DISABLE_STEPPER_DRIVER_INTERRUPT() pthread_mutex_trylock(&stp_mtx)
+#endif
 
 // Variables used by The Stepper Driver Interrupt
 static long acceleration_time, deceleration_time;
