@@ -393,16 +393,17 @@ void min_temp_error(uint8_t e) {
 //static void
 //handler(int sig, siginfo_t *si, void *uc)
 //static void * handler(void * arg)
-void loop(2, 50, 1000)
+const struct timespec t = {.tv_sec = 0, .tv_nsec = 1000000};
+const unsigned msec = 1000;
+
+void loop(2, 2, 10)
 {
   //these variables are only accesible from the ISR, but static, so they don't lose their value
-  unsigned char temp_count = 0;
-  unsigned long raw_temp_0_value = 0;
-  unsigned char temp_state = 0;
+  static unsigned char temp_count = 0;
+  static unsigned long raw_temp_0_value = 0;
+  static unsigned char temp_state = 0;
   uint16_t temp;
   //nanosleep args
-  //const struct timespec t = {.tv_sec = 0, .tv_nsec = 1000000};
-  unsigned msec = 1000;
 
   //while (1) {
     //DEBUG_PRINT("temperature\n");
