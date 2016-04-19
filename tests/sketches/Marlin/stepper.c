@@ -279,14 +279,16 @@ FORCE_INLINE void trapezoid_generator_reset() {
 //static void * handler(void * arg)
 void loop(3, 8, 10)
 {
-  //struct timespec t;
-  // Counter variables for the bresenham line tracer
-  long counter_x, counter_y, counter_z, counter_e;
+  struct timespec t;
   unsigned char out_bits;        // The next stepping-bits to be output
-  volatile unsigned long step_events_completed; // The number of step events executed in the current block
-  bool old_x_min_endstop=false, old_x_max_endstop=false, old_y_min_endstop=false, old_y_max_endstop=false,
-   old_z_min_endstop=false, old_z_max_endstop=false;
   signed char count_direction[NUM_AXIS] = { 1, 1, 1, 1};
+  uint64_t start, end;
+
+  // Counter variables for the bresenham line tracer
+  static long counter_x, counter_y, counter_z, counter_e;
+  static volatile unsigned long step_events_completed; // The number of step events executed in the current block
+  static bool old_x_min_endstop=false, old_x_max_endstop=false, old_y_min_endstop=false,
+              old_y_max_endstop=false, old_z_min_endstop=false, old_z_max_endstop=false;
 
   /* delay the first run (500 * 0x4000) nanoseconds */
   //delayMicroseconds(500 * 0x4000 / 1000);
