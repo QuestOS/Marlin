@@ -27,7 +27,8 @@
 #define DLOG(fmt,...) ;
 #endif
 
-enum ops {I2C_INIT, I2C_WRITE_BYTE, I2C_WRITE_WORD, I2C_READ_BYTE, I2C_READ_BYTES};
+enum ops {I2C_INIT, I2C_WRITE_BYTE, I2C_WRITE_WORD, I2C_READ_BYTE_DATA,
+  I2C_READ_BYTES_DATA, I2C_WRITE_WORD_DATA};
 
 int
 i2c_handler(enum ops operation, int arg1, int arg2, int arg3)
@@ -43,17 +44,22 @@ i2c_handler(enum ops operation, int arg1, int arg2, int arg3)
     }
 		case I2C_WRITE_BYTE: {
       unsigned char data = arg1; 
-      return byt_i2c_write_byte_data(data);
+      return byt_i2c_write_byte(data);
     }
 		case I2C_WRITE_WORD: {
       u16 data = arg1; 
-      return byt_i2c_write_word_data(data);
+      return byt_i2c_write_word(data);
     }
-		case I2C_READ_BYTE: {
+		case I2C_WRITE_WORD_DATA: {
+      u16 data = arg1; 
+      u8 cmd = arg2; 
+      return byt_i2c_write_word_data(cmd, data);
+    }
+		case I2C_READ_BYTE_DATA: {
       u8 cmd = arg1; 
       return byt_i2c_read_byte_data(cmd);
     }
-		case I2C_READ_BYTES: {
+		case I2C_READ_BYTES_DATA: {
       u8 cmd = arg1; 
       u8 * data = (u8 *)arg2;
       int length = arg3;
