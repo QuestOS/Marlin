@@ -280,9 +280,8 @@ FORCE_INLINE void trapezoid_generator_reset() {
 void loop(3, 8, 10)
 {
   struct timespec t;
-  unsigned char out_bits;        // The next stepping-bits to be output
-  signed char count_direction[NUM_AXIS] = { 1, 1, 1, 1};
-  uint64_t start, end;
+  static unsigned char out_bits;        // The next stepping-bits to be output
+  static signed char count_direction[NUM_AXIS] = { 1, 1, 1, 1};
 
   // Counter variables for the bresenham line tracer
   static long counter_x, counter_y, counter_z, counter_e;
@@ -312,50 +311,51 @@ void loop(3, 8, 10)
         counter_z = counter_x;
         counter_e = counter_x;
         step_events_completed = 0;
+
+        // Set directions 
+        // --TOM--: only need to set once for each block
+        out_bits = current_block->direction_bits;
+        // Set the direction bits 
+        if((out_bits & (1<<X_AXIS))!=0){
+          WRITE(X_DIR_PIN, INVERT_X_DIR);
+          count_direction[X_AXIS]=-1;
+        } else{
+          WRITE(X_DIR_PIN, !INVERT_X_DIR);
+          count_direction[X_AXIS]=1;
+        }
+        if((out_bits & (1<<Y_AXIS))!=0){
+          WRITE(Y_DIR_PIN, INVERT_Y_DIR);
+          count_direction[Y_AXIS]=-1;
+        } else{
+          WRITE(Y_DIR_PIN, !INVERT_Y_DIR);
+          count_direction[Y_AXIS]=1;
+        }
+        if ((out_bits & (1<<Z_AXIS)) != 0) {   
+          WRITE(Z_DIR_PIN,INVERT_Z_DIR);
+          count_direction[Z_AXIS]=-1;
+        } else {
+          WRITE(Z_DIR_PIN,!INVERT_Z_DIR);
+          count_direction[Z_AXIS]=1;
+        }
+        if ((out_bits & (1<<E_AXIS)) != 0) {  // -direction
+          REV_E_DIR();
+          count_direction[E_AXIS]=-1;
+        } else { // +direction
+          NORM_E_DIR();
+          count_direction[E_AXIS]=1;
+        }
       }
       else {
         //set_time(timerid, 0, 500 * 2000);
-        //t.tv_sec= 0;
-        //t.tv_nsec = 500 * 2000;
-        //nanosleep(&t, NULL);
-        unsigned msec = 1000;
-        usleep(msec);
+        t.tv_sec= 0;
+        t.tv_nsec = 500 * 2000;
+        //unsigned msec = 1000;
+        //usleep(msec);
       }
     }
 
     if (current_block != NULL) {
-      // Set directions TO DO This should be done once during init of trapezoid. Endstops -> interrupt
-      out_bits = current_block->direction_bits;
-
-      // Set the direction bits 
-      if((out_bits & (1<<X_AXIS))!=0){
-        WRITE(X_DIR_PIN, INVERT_X_DIR);
-        count_direction[X_AXIS]=-1;
-      } else{
-        WRITE(X_DIR_PIN, !INVERT_X_DIR);
-        count_direction[X_AXIS]=1;
-      }
-      if((out_bits & (1<<Y_AXIS))!=0){
-        WRITE(Y_DIR_PIN, INVERT_Y_DIR);
-        count_direction[Y_AXIS]=-1;
-      } else{
-        WRITE(Y_DIR_PIN, !INVERT_Y_DIR);
-        count_direction[Y_AXIS]=1;
-      }
-      if ((out_bits & (1<<Z_AXIS)) != 0) {   
-        WRITE(Z_DIR_PIN,INVERT_Z_DIR);
-        count_direction[Z_AXIS]=-1;
-      } else {
-        WRITE(Z_DIR_PIN,!INVERT_Z_DIR);
-        count_direction[Z_AXIS]=1;
-      }
-      if ((out_bits & (1<<E_AXIS)) != 0) {  // -direction
-        REV_E_DIR();
-        count_direction[E_AXIS]=-1;
-      } else { // +direction
-        NORM_E_DIR();
-        count_direction[E_AXIS]=1;
-      }
+      
 
       // check limit switches
       if (check_endstops) {
@@ -501,11 +501,10 @@ void loop(3, 8, 10)
         // step_rate to timer interval
         timer = calc_timer(acc_step_rate);
         //set_time(timerid, 0, 500 * timer);
-        //t.tv_sec = 0;
-        //t.tv_nsec = 500 * timer;
-        //nanosleep(&t, NULL);
-        unsigned msec = timer / 2;
-        usleep(msec);
+        t.tv_sec = 0;
+        t.tv_nsec = 500 * timer;
+        //unsigned msec = timer / 2;
+        //usleep(msec);
         acceleration_time += timer;
       }
       else if (step_events_completed > (unsigned long int)current_block->decelerate_after) {
@@ -525,20 +524,18 @@ void loop(3, 8, 10)
         // step_rate to timer interval
         timer = calc_timer(step_rate);
         //set_time(timerid, 0, 500 * timer);
-        //t.tv_sec = 0;
-        //t.tv_nsec = 500 * timer;
-        //nanosleep(&t, NULL);
-        unsigned msec = timer / 2;
-        usleep(msec);
+        t.tv_sec = 0;
+        t.tv_nsec = 500 * timer;
+        //unsigned msec = timer / 2;
+        //usleep(msec);
         deceleration_time += timer;
       }
       else {
         //set_time(timerid, 0, 500 * OCR1A_nominal);
-        //t.tv_sec = 0;
-        //t.tv_nsec = 500 * OCR1A_nominal;
-        //nanosleep(&t, NULL);
-        unsigned msec = OCR1A_nominal / 2;
-        usleep(msec);
+        t.tv_sec = 0;
+        t.tv_nsec = 500 * OCR1A_nominal;
+        //unsigned msec = OCR1A_nominal / 2;
+        //usleep(msec);
         // ensure we're running at the correct step rate, even if we just came off an acceleration
         step_loops = step_loops_nominal;
       }
@@ -552,6 +549,7 @@ void loop(3, 8, 10)
         plan_discard_current_block();
       }
     }
+    nanosleep(&t, NULL);
 
     //block if steppers are disabled
     //pthread_mutex_lock(&stp_mtx);
