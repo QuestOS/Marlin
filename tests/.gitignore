@@ -50,3 +50,4 @@ sketches/communication/comm
 mraa/i2c_write_test
 mraa/i2c_read_test
 mraa/gpio_test
+mraa/ads1115

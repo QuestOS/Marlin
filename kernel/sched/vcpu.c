@@ -930,7 +930,6 @@ vmx_migration_end:
 #else
     LAPIC_start_timer (cpu_bus_freq / QUANTUM_HZ);
 #endif
-  }
 
   if (vcpu) {
     /* handle beginning-of-timeslice accounting */
