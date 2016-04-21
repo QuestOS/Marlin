@@ -21,7 +21,7 @@
 #include "mem/mem.h"
 #include "drivers/acpi/acpixf.h"
 
-#define DEBUG_MGPIO
+//#define DEBUG_MGPIO
 
 #ifdef DEBUG_MGPIO
 #define DLOG(fmt,...) DLOG_PREFIX("MINNOWMAX GPIO",fmt,##__VA_ARGS__)

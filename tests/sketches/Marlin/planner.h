@@ -125,7 +125,7 @@ static FORCE_INLINE block_t *plan_get_current_block()
   block->busy = true;
   pthread_spin_unlock(&block_spinlock);
 
-  DEBUG_PRINT("STEPPER fetching block %u\n", block_buffer_tail);
+  //DEBUG_PRINT("STEPPER fetching block %u\n", block_buffer_tail);
   return(block);
 }
 

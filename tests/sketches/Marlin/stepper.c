@@ -277,7 +277,7 @@ FORCE_INLINE void trapezoid_generator_reset() {
 //ISR(TIMER1_COMPA_vect)
 //static void handler(void)
 //static void * handler(void * arg)
-void loop(3, 8, 10)
+void loop(3, 4, 10)
 {
   struct timespec t;
   static unsigned char out_bits;        // The next stepping-bits to be output
@@ -301,9 +301,9 @@ void loop(3, 8, 10)
       // Anything in the buffer?
       current_block = plan_get_current_block();
       if (current_block != NULL) {
-        DEBUG_PRINT("STEPPER steps to execute on each axis: (%ld, %ld, %ld, %ld)\n",
-            current_block->steps_x, current_block->steps_y, current_block->steps_z,
-            current_block->steps_e);
+        //DEBUG_PRINT("STEPPER steps to execute on each axis: (%ld, %ld, %ld, %ld)\n",
+        //    current_block->steps_x, current_block->steps_y, current_block->steps_z,
+        //    current_block->steps_e);
         //current_block->busy = true;
         trapezoid_generator_reset();
         counter_x = -(current_block->step_event_count >> 1);
@@ -438,7 +438,12 @@ void loop(3, 8, 10)
       //generate pulse to drive steppers
       int8_t i;
       for(i=0; i < step_loops; i++) { // Take multiple steps per interrupt (For high speed moves)
+
         counter_x += current_block->steps_x;
+        counter_y += current_block->steps_y;
+        counter_z += current_block->steps_z;
+        counter_e += current_block->steps_e;
+
         pthread_spin_lock(&count_spinlock);
         if (counter_x > 0)
           count_position[X_AXIS]+=count_direction[X_AXIS];   
@@ -457,7 +462,6 @@ void loop(3, 8, 10)
           WRITE(X_STEP_PIN, INVERT_X_STEP_PIN);
         }
 
-        counter_y += current_block->steps_y;
         if (counter_y > 0) {
           WRITE(Y_STEP_PIN, !INVERT_Y_STEP_PIN);
           counter_y -= current_block->step_event_count;
@@ -466,7 +470,6 @@ void loop(3, 8, 10)
         
         }
 
-        counter_z += current_block->steps_z;
         if (counter_z > 0) {
           WRITE(Z_STEP_PIN, !INVERT_Z_STEP_PIN);
           counter_z -= current_block->step_event_count;
@@ -475,7 +478,6 @@ void loop(3, 8, 10)
           
         }
 
-        counter_e += current_block->steps_e;
         if (counter_e > 0) {
           WRITE_E_STEP(!INVERT_E_STEP_PIN);
           counter_e -= current_block->step_event_count;

@@ -530,10 +530,10 @@ void plan_buffer_line(float x, float y, float z, const float e, float feed_rate,
   //DEBUG_PRINT("axis_steps_per_unit: (%ld, %ld, %ld, %ld)\n", 
   //    axis_steps_per_unit[X_AXIS], axis_steps_per_unit[Y_AXIS],
   //    axis_steps_per_unit[Z_AXIS], axis_steps_per_unit[E_AXIS]);
-  DEBUG_PRINT("PLANNER current: (%ld, %ld, %ld, %ld)\n", 
-      position[X_AXIS], position[Y_AXIS], position[Z_AXIS], position[E_AXIS]);
-  DEBUG_PRINT("PLANNER target: (%ld, %ld, %ld, %ld)\n", 
-      target[X_AXIS], target[Y_AXIS], target[Z_AXIS], target[E_AXIS]);
+  //DEBUG_PRINT("PLANNER current: (%ld, %ld, %ld, %ld)\n", 
+  //    position[X_AXIS], position[Y_AXIS], position[Z_AXIS], position[E_AXIS]);
+  //DEBUG_PRINT("PLANNER target: (%ld, %ld, %ld, %ld)\n", 
+  //    target[X_AXIS], target[Y_AXIS], target[Z_AXIS], target[E_AXIS]);
 
   #ifdef PREVENT_DANGEROUS_EXTRUDE
   if(target[E_AXIS]!=position[E_AXIS])
@@ -555,7 +555,7 @@ void plan_buffer_line(float x, float y, float z, const float e, float feed_rate,
   #endif
 
   // Prepare to set up new block
-  DEBUG_PRINT("PLANNER storing into block %u\n", block_buffer_head);
+  //DEBUG_PRINT("PLANNER storing into block %u\n", block_buffer_head);
   block_t *block = &block_buffer[block_buffer_head];
 
   // Mark block as not busy (Not executed by the stepper interrupt)
@@ -568,8 +568,8 @@ void plan_buffer_line(float x, float y, float z, const float e, float feed_rate,
   block->steps_e = labs(target[E_AXIS]-position[E_AXIS]);
   block->steps_e *= extrudemultiply;
   block->steps_e /= 100;
-  DEBUG_PRINT("PLANNER on each axis: (%ld, %ld, %ld, %ld)\n", 
-      block->steps_x, block->steps_y, block->steps_z, block->steps_e);
+  //DEBUG_PRINT("PLANNER on each axis: (%ld, %ld, %ld, %ld)\n", 
+  //    block->steps_x, block->steps_y, block->steps_z, block->steps_e);
   block->step_event_count = max(block->steps_x, max(block->steps_y, max(block->steps_z, block->steps_e)));
 
   // Bail if this is a zero-length block

@@ -151,7 +151,7 @@ void ikill()
 void setup() {
   //load commands
  	file_buf = &_binary_test_gcode_start;
-	DEBUG_PRINT("%s", file_buf);
+	//DEBUG_PRINT("%s", file_buf);
 
   // loads data from EEPROM if available else uses defaults (and resets step acceleration rate)
   DEBUG_PRINT("loading data\n");
@@ -175,7 +175,7 @@ void setup() {
   st_init();    //init stepper
 }
 
-void loop(1, 50, 1000) {
+void loop(1, 30, 100) {
 	if (get_command()) {
     DEBUG_PRINT("==========================================\n");
     DEBUG_PRINT("%s\n", cmdbuffer);
@@ -878,11 +878,11 @@ void prepare_move()
 
   previous_millis_cmd = millis();
 
-  DEBUG_PRINT("MAIN current: (%lf, %lf, %lf, %lf)\n",
-      current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS],
-      current_position[E_AXIS]);
-  DEBUG_PRINT("MAIN target: (%lf, %lf, %lf, %lf)\n",
-      destination[X_AXIS], destination[Y_AXIS], destination[Z_AXIS], destination[E_AXIS]);
+  //DEBUG_PRINT("MAIN current: (%lf, %lf, %lf, %lf)\n",
+  //    current_position[X_AXIS], current_position[Y_AXIS], current_position[Z_AXIS],
+  //    current_position[E_AXIS]);
+  //DEBUG_PRINT("MAIN target: (%lf, %lf, %lf, %lf)\n",
+  //    destination[X_AXIS], destination[Y_AXIS], destination[Z_AXIS], destination[E_AXIS]);
   // Do not use feedmultiply for E or Z only moves
   if( (current_position[X_AXIS] == destination [X_AXIS]) && (current_position[Y_AXIS] == destination [Y_AXIS])) {
       plan_buffer_line(destination[X_AXIS], destination[Y_AXIS], destination[Z_AXIS], destination[E_AXIS], feedrate/60, active_extruder);
