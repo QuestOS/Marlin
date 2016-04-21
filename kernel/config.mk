@@ -4,7 +4,7 @@
 OPT = 0
 
 # Disable SMP
-CFG += -DNO_SMP
+# CFG += -DNO_SMP
 
 # Disable "logger" thread
 CFG += -DNO_LOGGER
@@ -13,7 +13,7 @@ CFG += -DNO_LOGGER
 # CFG += -DNO_ACPI
 
 # Disable Intel Multiprocessor Specification parsing
-CFG += -DNO_INTEL_MPS
+# CFG += -DNO_INTEL_MPS
 
 # Use VMX-based virtual machines for isolation
 # CFG += -DUSE_VMX
@@ -48,13 +48,13 @@ KMALLOC = tlsf
 # Enable Serial MMIO32 driver
 # This will disable port based RS232
 # Enable this flag for embedded platforms such as Galileo board
-CFG += -DSERIAL_MMIO32
+# CFG += -DSERIAL_MMIO32
 
 # Minnowboard Max
-# CFG += -DMINNOWMAX
+CFG += -DMINNOWMAX
 
 # Galileo
-CFG += -DGALILEO
+# CFG += -DGALILEO
 
 # Disable FPU
 CFG += -DNO_FPU
@@ -63,6 +63,6 @@ CFG += -DNO_FPU
 CFG += -DNO_POLOLU
 
 # Disable attachInterrupt IOVCPU
-# CFG += -DNO_GPIO_IOVCPU
+CFG += -DNO_GPIO_IOVCPU
 
 CFG += -DNANOSLEEP
