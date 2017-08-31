@@ -7,7 +7,7 @@ OPT = 0
 # CFG += -DNO_SMP
 
 # Disable "logger" thread
-# CFG += -DNO_LOGGER
+CFG += -DNO_LOGGER
 
 # Disable ACPI support
 # CFG += -DNO_ACPI
@@ -19,16 +19,16 @@ OPT = 0
 # CFG += -DUSE_VMX
 
 # Use PL2303 usb-serial converter for serial output
-#CFG += -DUSE_PL2303
+# CFG += -DUSE_PL2303
 
 # Share UHCI USB host controller driver
 #CFG += -DSHARED_UHCI
 
 # USB provides real-time guarantees for bulk and control transactions
-CFG += -DUSB_REALTIME_ASYNC 
+#CFG += -DUSB_REALTIME_ASYNC 
 
 # Use USB Migration for cross machine migration
-CFG += -DUSB_MIGRATION
+#CFG += -DUSB_MIGRATION
 
 # Change to use different allocator (default: tlsf)
 KMALLOC = tlsf
@@ -50,8 +50,17 @@ KMALLOC = tlsf
 # Enable this flag for embedded platforms such as Galileo board
 # CFG += -DSERIAL_MMIO32
 
+# Minnowboard Max
+CFG += -DMINNOWMAX
+
+# Galileo
+# CFG += -DGALILEO
+
 # Disable FPU
-# CFG += -DNO_FPU
+CFG += -DNO_FPU
+
+# No Pololu
+CFG += -DNO_POLOLU
 
 # Disable attachInterrupt IOVCPU
-# CFG += -DNO_GPIO_IOVCPU
+CFG += -DNO_GPIO_IOVCPU

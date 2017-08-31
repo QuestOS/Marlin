@@ -24,17 +24,17 @@ $1/%: %.c $(SKETCH_MAIN) $(LIB_DEST)/libc.a
 	$(CC) $(INCS) $(CFLAGS) $$< $(SKETCH_MAIN) -o $$@
 endef
 
-.PHONY: all clean install Marlin
+.PHONY: all clean install minnow
 
-all: $(PROGS) Marlin
+all: $(PROGS) minnow
 
-Marlin: 
+minnow:
 	cd $@; $(MAKE) all
 
 clean:
-	rm -f $(PROGS) Marlin/*.o Marlin/marlin
+	rm -f $(PROGS) minnow/*.o minnow/minnow
 
-install: $(PROGS) Marlin
-	$(INSTALL_CMD) $(PROGS) Marlin/marlin $(INSTALL_DIR)
+install: $(PROGS) minnow
+	$(INSTALL_CMD) $(PROGS) minnow/minnow $(INSTALL_DIR)
 
 $(foreach bdir,$(BUILD_DIR),$(eval $(call make-goal,$(bdir))))

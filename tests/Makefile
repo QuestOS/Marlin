@@ -19,7 +19,7 @@ PROGS = exec migtest race test1 test2 test3 test4 test5 \
 	vshm_test vshm_circ_buf vshm_async \
 	fault_detection fault_detection_sink \
 	vshm_linux pololu thread thread1 matrix \
-	find_prime nanosleep
+	find_prime
 
 #usb_test usb_test_rtt
 
